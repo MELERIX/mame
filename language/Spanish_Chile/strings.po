@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: MAME\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2023-02-18 05:29+1100\n"
-"PO-Revision-Date: 2023-02-20 01:53-0300\n"
+"PO-Revision-Date: 2023-03-03 16:03-0300\n"
 "Last-Translator: MELERIX\n"
 "Language-Team: \n"
 "Language: es_CL\n"
@@ -3290,15 +3290,15 @@ msgstr "Entradas de teclado\tSí\n"
 
 #: src/frontend/mame/ui/selmenu.cpp:2958
 msgid "Overall\tNOT WORKING\n"
-msgstr "En General\tNO FUNCIONA\n"
+msgstr "En general\tNO FUNCIONA\n"
 
 #: src/frontend/mame/ui/selmenu.cpp:2960
 msgid "Overall\tUnemulated Protection\n"
-msgstr "En General\tProtección no emulada\n"
+msgstr "En general\tProtección no emulada\n"
 
 #: src/frontend/mame/ui/selmenu.cpp:2962
 msgid "Overall\tWorking\n"
-msgstr "En General\tFuncionando\n"
+msgstr "En general\tFuncionando\n"
 
 #: src/frontend/mame/ui/selmenu.cpp:2965
 msgid "Graphics\tUnimplemented\n"
