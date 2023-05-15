@@ -817,7 +817,6 @@ end
 ---------------------------------------------------
 -- Sega custom sound chips
 --@src/devices/sound/segapcm.h,SOUNDS["SEGAPCM"] = true
---@src/devices/sound/multipcm.h,SOUNDS["MULTIPCM"] = true
 --@src/devices/sound/scsp.h,SOUNDS["SCSP"] = true
 --@src/devices/sound/aica.h,SOUNDS["AICA"] = true
 ---------------------------------------------------
@@ -826,13 +825,6 @@ if (SOUNDS["SEGAPCM"]~=null) then
 	files {
 		MAME_DIR .. "src/devices/sound/segapcm.cpp",
 		MAME_DIR .. "src/devices/sound/segapcm.h",
-	}
-end
-
-if (SOUNDS["MULTIPCM"]~=null) then
-	files {
-		MAME_DIR .. "src/devices/sound/multipcm.cpp",
-		MAME_DIR .. "src/devices/sound/multipcm.h",
 	}
 end
 
@@ -1268,6 +1260,45 @@ if (SOUNDS["YMZ770"]~=null) then
 end
 
 ---------------------------------------------------
+-- Yamaha GEW series PCM
+--@src/devices/sound/gew7.h,SOUNDS["GEW7"] = true
+--@src/devices/sound/multipcm.h,SOUNDS["MULTIPCM"] = true
+---------------------------------------------------
+
+if (SOUNDS["GEW7"]~=null or SOUNDS["MULTIPCM"]~=null) then
+	files {
+		MAME_DIR .. "src/devices/sound/gew.cpp",
+		MAME_DIR .. "src/devices/sound/gew.h",
+	}
+end
+
+if (SOUNDS["GEW7"]~=null) then
+	files {
+		MAME_DIR .. "src/devices/sound/gew7.cpp",
+		MAME_DIR .. "src/devices/sound/gew7.h",
+	}
+end
+
+if (SOUNDS["MULTIPCM"]~=null) then
+	files {
+		MAME_DIR .. "src/devices/sound/multipcm.cpp",
+		MAME_DIR .. "src/devices/sound/multipcm.h",
+	}
+end
+
+---------------------------------------------------
+-- MP3 AUDIO
+--@src/devices/sound/mp3_audio.h,SOUNDS["MP3_AUDIO"] = true
+---------------------------------------------------
+
+if (SOUNDS["MP3_AUDIO"]~=null) then
+	files {
+		MAME_DIR .. "src/devices/sound/mp3_audio.cpp",
+		MAME_DIR .. "src/devices/sound/mp3_audio.h",
+	}
+end
+
+---------------------------------------------------
 -- MPEG AUDIO
 --@src/devices/sound/mpeg_audio.h,SOUNDS["MPEG_AUDIO"] = true
 ---------------------------------------------------
@@ -1407,6 +1438,18 @@ if (SOUNDS["LC7535"]~=null) then
 	files {
 		MAME_DIR .. "src/devices/sound/lc7535.cpp",
 		MAME_DIR .. "src/devices/sound/lc7535.h",
+	}
+end
+
+---------------------------------------------------
+-- Sanyo LC82310
+--@src/devices/sound/lc82310.h,SOUNDS["LC82310"] = true
+---------------------------------------------------
+
+if (SOUNDS["LC82310"]~=null) then
+	files {
+		MAME_DIR .. "src/devices/sound/lc82310.cpp",
+		MAME_DIR .. "src/devices/sound/lc82310.h",
 	}
 end
 
