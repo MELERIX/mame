@@ -33,7 +33,7 @@
 
 
 // configurable logging
-#define LOG_SHADOWS     (1U <<  1)
+#define LOG_SHADOWS     (1U << 1)
 
 #define VERBOSE (LOG_GENERAL | LOG_SHADOWS)
 
@@ -85,8 +85,6 @@ private:
 	void sound_map(address_map &map);
 };
 
-
-// video
 
 /***************************************************************************
 
@@ -192,8 +190,6 @@ uint32_t ultraman_state::screen_update(screen_device &screen, bitmap_ind16 &bitm
 	return 0;
 }
 
-
-// machine
 
 void ultraman_state::sound_nmi_enable_w(uint8_t data)
 {

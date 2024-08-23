@@ -15,10 +15,10 @@
 ***************************************************************************/
 
 #include "emu.h"
-#include "machine/timekpr.h"
+#include "timekpr.h"
+
 #include "machine/timehelp.h"
 
-#define LOG_GENERAL (1U << 0)
 #define LOG_TICKS   (1U << 1)
 
 #define VERBOSE (0)
@@ -232,8 +232,6 @@ void timekeeper_device::device_start()
 
 	m_watchdog_timer = timer_alloc(FUNC(timekeeper_device::watchdog_callback), this);
 	m_watchdog_timer->adjust(attotime::never);
-	m_reset_cb.resolve_safe();
-	m_irq_cb.resolve_safe();
 }
 
 //-------------------------------------------------
@@ -380,7 +378,7 @@ void timekeeper_device::watchdog_write(u8 data)
 
 void timekeeper_device::write(offs_t offset, u8 data)
 {
-	LOGMASKED(LOG_GENERAL, "timekeeper_device::write: %04x = %02x\n", offset, data);
+	LOG("timekeeper_device::write: %04x = %02x\n", offset, data);
 	if (offset == m_offset_control)
 	{
 		if ((m_control & CONTROL_W) != 0 &&
@@ -440,7 +438,7 @@ u8 timekeeper_device::read(offs_t offset)
 		m_reset_cb(CLEAR_LINE);
 		m_irq_cb(CLEAR_LINE);
 	}
-	LOGMASKED(LOG_GENERAL, "timekeeper_device::read: %04x (%02x)\n", offset, result);
+	LOG("timekeeper_device::read: %04x (%02x)\n", offset, result);
 	return result;
 }
 
@@ -473,8 +471,8 @@ void timekeeper_device::nvram_default()
 
 bool timekeeper_device::nvram_read(util::read_stream &file)
 {
-	size_t actual;
-	if (file.read(&m_data[0], m_size, actual) || actual != m_size)
+	auto const [err, actual] = util::read(file, &m_data[0], m_size);
+	if (err || (actual != m_size))
 		return false;
 
 	counters_to_ram();
@@ -489,6 +487,6 @@ bool timekeeper_device::nvram_read(util::read_stream &file)
 
 bool timekeeper_device::nvram_write(util::write_stream &file)
 {
-	size_t actual;
-	return !file.write(&m_data[0], m_size, actual) && actual == m_size;
+	auto const [err, actual] = util::write(file, &m_data[0], m_size);
+	return !err;
 }

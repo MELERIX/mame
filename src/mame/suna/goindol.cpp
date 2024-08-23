@@ -34,7 +34,7 @@ Notes:
 
 
 // configurable logging
-#define LOG_PROTECTION     (1U <<  1)
+#define LOG_PROTECTION     (1U << 1)
 
 //#define VERBOSE (LOG_GENERAL | LOG_PROTECTION)
 
@@ -109,8 +109,6 @@ private:
 	void sound_map(address_map &map);
 };
 
-
-// video
 
 /***************************************************************************
 
@@ -228,8 +226,6 @@ uint32_t goindol_state::screen_update(screen_device &screen, bitmap_ind16 &bitma
 	return 0;
 }
 
-
-// machine
 
 void goindol_state::bankswitch_w(uint8_t data)
 {
@@ -608,7 +604,7 @@ void goindol_state::init_goindol()
 } // anonymous namespace
 
 
-GAME( 1987, goindol,  0,       goindol, goindol, goindol_state, init_goindol, ROT90, "SunA",    "Goindol (World)", MACHINE_UNEMULATED_PROTECTION | MACHINE_SUPPORTS_SAVE )
-GAME( 1987, goindolu, goindol, goindol, goindol, goindol_state, init_goindol, ROT90, "SunA",    "Goindol (US)",    MACHINE_UNEMULATED_PROTECTION | MACHINE_SUPPORTS_SAVE )
-GAME( 1987, goindolj, goindol, goindol, goindol, goindol_state, init_goindol, ROT90, "SunA",    "Goindol (Japan)", MACHINE_UNEMULATED_PROTECTION | MACHINE_SUPPORTS_SAVE )
-GAME( 1987, homo,     goindol, goindol, homo,    goindol_state, empty_init,   ROT90, "bootleg", "Homo",            MACHINE_SUPPORTS_SAVE )
+GAME( 1987, goindol,  0,       goindol, goindol, goindol_state, init_goindol, ROT90, "SunA",    "Goindol (SunA, World)", MACHINE_UNEMULATED_PROTECTION | MACHINE_SUPPORTS_SAVE )
+GAME( 1987, goindolu, goindol, goindol, goindol, goindol_state, init_goindol, ROT90, "SunA",    "Goindol (SunA, US)",    MACHINE_UNEMULATED_PROTECTION | MACHINE_SUPPORTS_SAVE )
+GAME( 1987, goindolj, goindol, goindol, goindol, goindol_state, init_goindol, ROT90, "SunA",    "Goindol (SunA, Japan)", MACHINE_UNEMULATED_PROTECTION | MACHINE_SUPPORTS_SAVE )
+GAME( 1987, homo,     goindol, goindol, homo,    goindol_state, empty_init,   ROT90, "bootleg", "Homo",                  MACHINE_SUPPORTS_SAVE )

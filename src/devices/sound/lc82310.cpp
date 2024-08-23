@@ -35,9 +35,13 @@ void lc82310_device::device_start()
 	save_item(NAME(m_ckctl));
 	save_item(NAME(m_dictl));
 	save_item(NAME(m_doctl));
+	save_item(NAME(m_ctl_state));
+	save_item(NAME(m_ctl_cmd));
 	save_item(NAME(m_ctl_bits));
 	save_item(NAME(m_ctl_byte));
 	save_item(NAME(m_ctl_out_byte));
+
+	mp3dec->register_save(*this);
 }
 
 void lc82310_device::device_reset()
@@ -68,12 +72,12 @@ void lc82310_device::reset_playback()
 	m_frame_channels = 2;
 }
 
-WRITE_LINE_MEMBER(lc82310_device::zcsctl_w)
+void lc82310_device::zcsctl_w(int state)
 {
 	m_csctl = state;
 }
 
-WRITE_LINE_MEMBER(lc82310_device::ckctl_w)
+void lc82310_device::ckctl_w(int state)
 {
 	if (m_csctl == 0 && m_ckctl == 0 && state == 1)
 	{
@@ -111,17 +115,17 @@ WRITE_LINE_MEMBER(lc82310_device::ckctl_w)
 	m_ckctl = state;
 }
 
-WRITE_LINE_MEMBER(lc82310_device::dictl_w)
+void lc82310_device::dictl_w(int state)
 {
 	m_dictl = state;
 }
 
-READ_LINE_MEMBER(lc82310_device::doctl_r)
+int lc82310_device::doctl_r()
 {
 	return m_doctl;
 }
 
-READ_LINE_MEMBER(lc82310_device::demand_r)
+int lc82310_device::demand_r()
 {
 	return m_mp3data_count < mp3data.size();
 }
