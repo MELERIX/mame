@@ -508,14 +508,14 @@ public:
 	void rainbow_base(machine_config &config);
 
 protected:
-	virtual void machine_start() override;
-	virtual void machine_reset() override;
+	virtual void machine_start() override ATTR_COLD;
+	virtual void machine_reset() override ATTR_COLD;
 
 	TIMER_CALLBACK_MEMBER(command_tick);
 	TIMER_CALLBACK_MEMBER(switch_off_tick);
 
-	void rainbow8088_base_map(address_map &map);
-	void rainbow8088_base_io(address_map &map);
+	void rainbow8088_base_map(address_map &map) ATTR_COLD;
+	void rainbow8088_base_io(address_map &map) ATTR_COLD;
 
 	uint8_t ext_ram_r(offs_t offset);
 
@@ -599,9 +599,9 @@ protected:
 	void vram_w(offs_t offset, uint16_t data);
 	void GDC_vblank_irq(int state);
 
-	void rainbowz80_io(address_map &map);
-	void rainbowz80_mem(address_map &map);
-	void upd7220_map(address_map &map);
+	void rainbowz80_io(address_map &map) ATTR_COLD;
+	void rainbowz80_mem(address_map &map) ATTR_COLD;
+	void upd7220_map(address_map &map) ATTR_COLD;
 	enum
 	{   // LOWEST PRIORITY
 		// Mnemonic - - - - - -  TYPE  ADDRESS - Source
@@ -760,10 +760,10 @@ public:
 	void rainbow_modela(machine_config &config);
 
 private:
-	virtual void machine_reset() override;
+	virtual void machine_reset() override ATTR_COLD;
 
-	void rainbow8088_map(address_map &map);
-	void rainbow8088_io(address_map &map);
+	void rainbow8088_map(address_map &map) ATTR_COLD;
+	void rainbow8088_io(address_map &map) ATTR_COLD;
 
 	void ext_ram_w(offs_t offset, uint8_t data);
 	uint8_t rtc_r(offs_t offset);
@@ -782,10 +782,10 @@ public:
 	void rainbow_modelb(machine_config &config);
 
 private:
-	virtual void machine_reset() override;
+	virtual void machine_reset() override ATTR_COLD;
 
-	void rainbow8088_map(address_map &map);
-	void rainbow8088_io(address_map &map);
+	void rainbow8088_map(address_map &map) ATTR_COLD;
+	void rainbow8088_io(address_map &map) ATTR_COLD;
 
 	void ext_ram_w(offs_t offset, uint8_t data);
 	uint8_t rtc_r(offs_t offset);
@@ -1151,7 +1151,7 @@ static INPUT_PORTS_START(rainbow100b_in)
 	PORT_DIPNAME(0x01, 0x00, "W18 (FACTORY TEST D, LEAVE OFF) (8251A: DSR)") PORT_TOGGLE
 	PORT_DIPSETTING(0x00, DEF_STR(Off))
 	PORT_DIPSETTING(0x01, DEF_STR(On))
-	PORT_WRITE_LINE_DEVICE_MEMBER("kbdser", i8251_device, write_dsr)
+	PORT_WRITE_LINE_DEVICE_MEMBER("kbdser", FUNC(i8251_device::write_dsr))
 
 	// J17 jumper on FDC controller board shifts drive select (experimental) -
 	PORT_START("J17")
@@ -3464,6 +3464,6 @@ ROM_END
 /* Driver */
 
 /*   YEAR  NAME         PARENT   COMPAT  MACHINE         INPUT           STATE                 INIT        COMPANY                          FULLNAME         FLAGS */
-COMP(1982, rainbow100a, rainbow, 0,      rainbow_modela, rainbow100b_in, rainbow_modela_state, empty_init, "Digital Equipment Corporation", "Rainbow 100-A", MACHINE_IS_SKELETON)
+COMP(1982, rainbow100a, rainbow, 0,      rainbow_modela, rainbow100b_in, rainbow_modela_state, empty_init, "Digital Equipment Corporation", "Rainbow 100-A", MACHINE_NO_SOUND | MACHINE_NOT_WORKING)
 COMP(1983, rainbow,     0,       0,      rainbow_modelb, rainbow100b_in, rainbow_modelb_state, empty_init, "Digital Equipment Corporation", "Rainbow 100-B", MACHINE_IMPERFECT_GRAPHICS | MACHINE_IMPERFECT_COLORS)
 COMP(1985, rainbow190,  rainbow, 0,      rainbow_modelb, rainbow100b_in, rainbow_modelb_state, empty_init, "Digital Equipment Corporation", "Rainbow 190-B", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_COLORS)

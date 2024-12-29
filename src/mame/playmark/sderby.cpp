@@ -120,7 +120,7 @@ public:
 
 protected:
 	virtual void machine_start() override { m_lamps.resolve(); }
-	virtual void video_start() override;
+	virtual void video_start() override ATTR_COLD;
 
 	required_shared_ptr<uint16_t> m_bg_videoram;
 	required_shared_ptr<uint16_t> m_md_videoram;
@@ -160,12 +160,12 @@ protected:
 	uint32_t screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	uint32_t screen_update_pmroulet(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	void draw_sprites(bitmap_ind16 &bitmap, const rectangle &cliprect);
-	void luckboom_map(address_map &map);
-	void roulette_map(address_map &map);
-	void sderby_map(address_map &map);
-	void sderbya_map(address_map &map);
-	void shinygld_map(address_map &map);
-	void spacewin_map(address_map &map);
+	void luckboom_map(address_map &map) ATTR_COLD;
+	void roulette_map(address_map &map) ATTR_COLD;
+	void sderby_map(address_map &map) ATTR_COLD;
+	void sderbya_map(address_map &map) ATTR_COLD;
+	void shinygld_map(address_map &map) ATTR_COLD;
+	void spacewin_map(address_map &map) ATTR_COLD;
 };
 
 class zw3_state : public sderby_state
@@ -176,12 +176,12 @@ public:
 	void zw3(machine_config &config);
 
 protected:
-	virtual void video_start() override;
+	virtual void video_start() override ATTR_COLD;
 
 private:
 	TILE_GET_INFO_MEMBER(get_fg_tile_info);
 
-	void zw3_map(address_map &map);
+	void zw3_map(address_map &map) ATTR_COLD;
 };
 
 
@@ -786,7 +786,7 @@ INPUT_PORTS_END
 static INPUT_PORTS_START( pmroulet )
 	PORT_START("IN0")
 	PORT_BIT( 0x000f, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x0010, IP_ACTIVE_LOW, IPT_CUSTOM ) PORT_VBLANK("screen") // it must be toggled to boot anyway
+	PORT_BIT( 0x0010, IP_ACTIVE_LOW, IPT_CUSTOM ) PORT_READ_LINE_DEVICE_MEMBER("screen", FUNC(screen_device::vblank)) // it must be toggled to boot anyway
 	PORT_SERVICE_NO_TOGGLE(0x0020, IP_ACTIVE_LOW)
 	PORT_BIT( 0x00c0, IP_ACTIVE_LOW, IPT_UNKNOWN )
 	PORT_BIT( 0x0f00, IP_ACTIVE_LOW, IPT_UNKNOWN )
@@ -832,7 +832,7 @@ static INPUT_PORTS_START( croupierb )
 	PORT_BIT( 0x8000, IP_ACTIVE_LOW, IPT_UNKNOWN )
 
 	PORT_START("IN1")
-	PORT_BIT( 0x0001, IP_ACTIVE_LOW, IPT_CUSTOM ) PORT_VBLANK("screen") // it must be toggled to boot anyway
+	PORT_BIT( 0x0001, IP_ACTIVE_LOW, IPT_CUSTOM ) PORT_READ_LINE_DEVICE_MEMBER("screen", FUNC(screen_device::vblank)) // it must be toggled to boot anyway
 	PORT_BIT( 0xfffe, IP_ACTIVE_LOW, IPT_UNKNOWN )
 INPUT_PORTS_END
 
@@ -856,7 +856,7 @@ static INPUT_PORTS_START( magictch )
 	PORT_BIT( 0x8000, IP_ACTIVE_LOW, IPT_UNKNOWN )
 
 	PORT_START("IN1")
-	PORT_BIT( 0x0001, IP_ACTIVE_LOW, IPT_CUSTOM ) PORT_VBLANK("screen") // it must be toggled to boot anyway
+	PORT_BIT( 0x0001, IP_ACTIVE_LOW, IPT_CUSTOM ) PORT_READ_LINE_DEVICE_MEMBER("screen", FUNC(screen_device::vblank)) // it must be toggled to boot anyway
 	PORT_BIT( 0xfffe, IP_ACTIVE_LOW, IPT_UNKNOWN )
 INPUT_PORTS_END
 
@@ -880,7 +880,7 @@ static INPUT_PORTS_START( tropfrt )
 	PORT_BIT( 0x8000, IP_ACTIVE_LOW, IPT_UNKNOWN )
 
 	PORT_START("IN1")
-	PORT_BIT( 0x0001, IP_ACTIVE_LOW, IPT_CUSTOM ) PORT_VBLANK("screen") // it must be toggled to boot anyway
+	PORT_BIT( 0x0001, IP_ACTIVE_LOW, IPT_CUSTOM ) PORT_READ_LINE_DEVICE_MEMBER("screen", FUNC(screen_device::vblank)) // it must be toggled to boot anyway
 	PORT_BIT( 0xfffe, IP_ACTIVE_LOW, IPT_UNKNOWN )
 INPUT_PORTS_END
 

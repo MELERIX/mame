@@ -50,11 +50,11 @@ public:
 	void blocktax(machine_config &config);
 
 protected:
-	virtual void video_start() override;
+	virtual void video_start() override ATTR_COLD;
 
 private:
 	uint32_t screen_update_blocktax(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
-	[[maybe_unused]] void blocktax_map(address_map &map);
+	[[maybe_unused]] void blocktax_map(address_map &map) ATTR_COLD;
 	required_device<cpu_device> m_maincpu;
 };
 
@@ -112,4 +112,4 @@ ROM_END
 } // anonymous namespace
 
 
-GAME( 2002, blocktax, 0, blocktax, blocktax, blocktax_state, empty_init, ROT0, "TAX / Game Revival", "Blockout (TAX)", MACHINE_IS_SKELETON )
+GAME( 2002, blocktax, 0, blocktax, blocktax, blocktax_state, empty_init, ROT0, "TAX / Game Revival", "Blockout (TAX)", MACHINE_NO_SOUND | MACHINE_NOT_WORKING )

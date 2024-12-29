@@ -58,7 +58,7 @@ public:
 	void xybots(machine_config &config);
 
 protected:
-	virtual void machine_start() override;
+	virtual void machine_start() override ATTR_COLD;
 
 private:
 	required_device<cpu_device> m_maincpu;
@@ -79,7 +79,7 @@ private:
 	TILE_GET_INFO_MEMBER(get_alpha_tile_info);
 	TILE_GET_INFO_MEMBER(get_playfield_tile_info);
 	uint32_t screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
-	void main_map(address_map &map);
+	void main_map(address_map &map) ATTR_COLD;
 
 	static const atari_motion_objects_config s_mob_config;
 };
@@ -310,7 +310,7 @@ static INPUT_PORTS_START( xybots )
 	PORT_SERVICE( 0x0100, IP_ACTIVE_LOW )
 	PORT_BIT( 0x0200, IP_ACTIVE_LOW, IPT_CUSTOM ) PORT_ATARI_JSA_MAIN_TO_SOUND_READY("jsa") // /AUDBUSY
 	PORT_BIT( 0x0400, IP_ACTIVE_HIGH, IPT_CUSTOM ) // 256H
-	PORT_BIT( 0x0800, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_VBLANK("screen") // VBLANK
+	PORT_BIT( 0x0800, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_READ_LINE_DEVICE_MEMBER("screen", FUNC(screen_device::vblank)) // VBLANK
 	PORT_BIT( 0xf000, IP_ACTIVE_LOW, IPT_UNUSED )
 INPUT_PORTS_END
 

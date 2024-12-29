@@ -71,7 +71,7 @@ public:
 	void thunderj(machine_config &config);
 
 protected:
-	virtual void machine_start() override;
+	virtual void machine_start() override ATTR_COLD;
 
 private:
 	required_device<screen_device> m_screen;
@@ -94,8 +94,8 @@ private:
 	TILE_GET_INFO_MEMBER(get_playfield2_tile_info);
 	uint32_t screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 
-	void extra_map(address_map &map);
-	void main_map(address_map &map);
+	void extra_map(address_map &map) ATTR_COLD;
+	void main_map(address_map &map) ATTR_COLD;
 };
 
 
@@ -460,7 +460,7 @@ static INPUT_PORTS_START( thunderj )
 	PORT_BIT( 0x8000, IP_ACTIVE_LOW, IPT_JOYSTICK_UP ) PORT_PLAYER(1)
 
 	PORT_START("260012")
-	PORT_BIT( 0x0001, IP_ACTIVE_LOW, IPT_CUSTOM ) PORT_VBLANK("screen")
+	PORT_BIT( 0x0001, IP_ACTIVE_LOW, IPT_CUSTOM ) PORT_READ_LINE_DEVICE_MEMBER("screen", FUNC(screen_device::vblank))
 	PORT_SERVICE( 0x0002, IP_ACTIVE_LOW )
 	PORT_BIT( 0x0004, IP_ACTIVE_LOW, IPT_CUSTOM ) PORT_ATARI_JSA_SOUND_TO_MAIN_READY("jsa")   // Input buffer full (@260030)
 	PORT_BIT( 0x0008, IP_ACTIVE_LOW, IPT_UNUSED ) PORT_ATARI_JSA_MAIN_TO_SOUND_READY("jsa")  // Output buffer full (@360030)

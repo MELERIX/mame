@@ -53,8 +53,8 @@ public:
 	void cybstorm(machine_config &config);
 
 protected:
-	virtual void machine_start() override;
-	virtual void video_start() override;
+	virtual void machine_start() override ATTR_COLD;
+	virtual void video_start() override ATTR_COLD;
 
 private:
 	required_device<cpu_device> m_maincpu;
@@ -78,8 +78,8 @@ private:
 	uint32_t screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 
 	void round2(machine_config &config);
-	void main_map(address_map &map);
-	void vadbank_map(address_map &map);
+	void main_map(address_map &map) ATTR_COLD;
+	void vadbank_map(address_map &map) ATTR_COLD;
 };
 
 
@@ -417,14 +417,14 @@ static INPUT_PORTS_START( cybstorm )
 
 	PORT_BIT( 0x0000ff00, IP_ACTIVE_LOW, IPT_UNUSED ) // not tested
 
-	PORT_BIT( 0x00010000, IP_ACTIVE_LOW, IPT_CUSTOM ) PORT_HBLANK("screen")
+	PORT_BIT( 0x00010000, IP_ACTIVE_LOW, IPT_CUSTOM ) PORT_READ_LINE_DEVICE_MEMBER("screen", FUNC(screen_device::hblank))
 	PORT_BIT( 0x00020000, IP_ACTIVE_LOW, IPT_CUSTOM )
 	PORT_BIT( 0x00040000, IP_ACTIVE_LOW, IPT_VOLUME_DOWN )
 	PORT_BIT( 0x00080000, IP_ACTIVE_LOW, IPT_VOLUME_UP )
 	PORT_BIT( 0x00100000, IP_ACTIVE_LOW, IPT_CUSTOM ) PORT_ATARI_JSA_SOUND_TO_MAIN_READY("jsa")
 	PORT_BIT( 0x00200000, IP_ACTIVE_LOW, IPT_CUSTOM ) PORT_ATARI_JSA_MAIN_TO_SOUND_READY("jsa")
 	PORT_SERVICE( 0x00400000, IP_ACTIVE_LOW )
-	PORT_BIT( 0x00800000, IP_ACTIVE_LOW, IPT_CUSTOM ) PORT_VBLANK("screen")
+	PORT_BIT( 0x00800000, IP_ACTIVE_LOW, IPT_CUSTOM ) PORT_READ_LINE_DEVICE_MEMBER("screen", FUNC(screen_device::vblank))
 
 	PORT_BIT( 0xff000000, IP_ACTIVE_LOW, IPT_UNUSED ) // not tested
 INPUT_PORTS_END

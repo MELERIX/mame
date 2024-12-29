@@ -97,9 +97,6 @@ TODO:
   written out of order and hooking them up in the usual way causes the MCU to
   stop receiving interrupts.
 
-- remove the sound kludge in Baraduke. This might actually be a feature of the
-  CUS30 chip.
-
 
 DIP locations verified for:
 --------------------------
@@ -146,15 +143,14 @@ public:
 	void baraduke(machine_config &config);
 
 protected:
-	virtual void machine_start() override;
-	virtual void video_start() override;
+	virtual void machine_start() override ATTR_COLD;
+	virtual void video_start() override ATTR_COLD;
 
 private:
 	void inputport_select_w(uint8_t data);
 	uint8_t inputport_r();
 	void lamps_w(uint8_t data);
 	void irq_ack_w(uint8_t data);
-	uint8_t soundkludge_r();
 	void videoram_w(offs_t offset, uint8_t data);
 	void textram_w(offs_t offset, uint8_t data);
 	template <uint8_t Which> void scroll_w(offs_t offset, uint8_t data);
@@ -168,8 +164,8 @@ private:
 	void screen_vblank(int state);
 	void draw_sprites(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	void set_scroll(int layer);
-	void main_map(address_map &map);
-	void mcu_map(address_map &map);
+	void main_map(address_map &map) ATTR_COLD;
+	void mcu_map(address_map &map) ATTR_COLD;
 
 	required_shared_ptr<uint8_t> m_spriteram;
 	required_shared_ptr<uint8_t> m_videoram;
@@ -187,7 +183,6 @@ private:
 	output_finder<2> m_lamps;
 
 	uint8_t m_inputport_selected = 0;
-	uint16_t m_counter = 0;
 	tilemap_t *m_tx_tilemap = nullptr;
 	tilemap_t *m_bg_tilemap[2]{};
 	uint16_t m_xscroll[2]{};
@@ -251,19 +246,16 @@ void baraduke_state::palette(palette_device &palette) const
 
 ***************************************************************************/
 
-// convert from 32x32 to 36x28
 TILEMAP_MAPPER_MEMBER(baraduke_state::tx_tilemap_scan)
 {
-	int offs;
-
+	// convert from 32x32 to 36x28
 	row += 2;
 	col -= 2;
-	if (col & 0x20)
-		offs = row + ((col & 0x1f) << 5);
-	else
-		offs = col + (row << 5);
 
-	return offs;
+	if (col & 0x20)
+		return row + ((col & 0x1f) << 5);
+	else
+		return col + (row << 5);
 }
 
 TILE_GET_INFO_MEMBER(baraduke_state::tx_get_tile_info)
@@ -382,7 +374,7 @@ void baraduke_state::spriteram_w(offs_t offset, uint8_t data)
 void baraduke_state::draw_sprites(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect)
 {
 	uint8_t *spriteram = m_spriteram + 0x1800;
-	const uint8_t *source = &spriteram[0x0800 - 32];    // the last is NOT a sprite
+	const uint8_t *source = &spriteram[0x0800 - 32]; // the last is NOT a sprite
 	const uint8_t *finish = &spriteram[0x0000];
 
 	int const sprite_xoffs = spriteram[0x07f5] - 256 * (spriteram[0x07f4] & 1);
@@ -396,14 +388,14 @@ void baraduke_state::draw_sprites(screen_device &screen, bitmap_ind16 &bitmap, c
 
 	while (source >= finish)
 	{
-/*
-    source[10] S-FT ---P
-    source[11] TTTT TTTT
-    source[12] CCCC CCCX
-    source[13] XXXX XXXX
-    source[14] ---T -S-F
-    source[15] YYYY YYYY
-*/
+		/* sprite format:
+		source[10] S-FT ---P
+		source[11] TTTT TTTT
+		source[12] CCCC CCCX
+		source[13] XXXX XXXX
+		source[14] ---T -S-F
+		source[15] YYYY YYYY
+		*/
 		int const priority = source[10] & 0x01;
 		uint32_t const pri_mask = priority ? 0 : GFX_PMASK_2;
 		int const attr1 = source[10];
@@ -577,18 +569,9 @@ void baraduke_state::main_map(address_map &map)
 	map(0x6000, 0xffff).rom();
 }
 
-uint8_t baraduke_state::soundkludge_r()
-{
-	uint8_t ret = (m_counter >> 4) & 0xff;
-	if (!machine().side_effects_disabled())
-		m_counter++;
-	return ret;
-}
-
 void baraduke_state::mcu_map(address_map &map)
 {
 	map(0x1000, 0x13ff).rw(m_cus30, FUNC(namco_cus30_device::namcos1_cus30_r), FUNC(namco_cus30_device::namcos1_cus30_w)); // PSG device, shared RAM
-	map(0x1105, 0x1105).r(FUNC(baraduke_state::soundkludge_r)); // cures speech
 	map(0x8000, 0xbfff).rom().region("mcusub", 0);  // MCU external ROM
 	map(0x8000, 0x8000).nopw(); // watchdog reset?
 	map(0x8800, 0x8800).nopw(); // IRQ acknowledge?
@@ -749,7 +732,6 @@ void baraduke_state::machine_start()
 	m_lamps.resolve();
 
 	save_item(NAME(m_inputport_selected));
-	save_item(NAME(m_counter));
 }
 
 
@@ -763,10 +745,10 @@ void baraduke_state::baraduke(machine_config &config)
 	m_mcu->set_addrmap(AS_PROGRAM, &baraduke_state::mcu_map);
 	m_mcu->in_p1_cb().set(FUNC(baraduke_state::inputport_r));
 	m_mcu->out_p1_cb().set(FUNC(baraduke_state::inputport_select_w));
-	m_mcu->in_p2_cb().set_constant(0xff);                             // LEDs won't work otherwise
+	m_mcu->in_p2_cb().set_constant(0xff); // LEDs won't work otherwise
 	m_mcu->out_p2_cb().set(FUNC(baraduke_state::lamps_w));
 
-	config.set_maximum_quantum(attotime::from_hz(6000));      // we need heavy synch
+	config.set_maximum_quantum(attotime::from_hz(6000)); // we need heavy synch
 
 	WATCHDOG_TIMER(config, "watchdog");
 

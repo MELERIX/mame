@@ -186,7 +186,6 @@ end
 
 
 ---------------------------------------------------
----------------------------------------------------
 -- AC97
 --@src/devices/sound/pic-ac97.h,SOUNDS["AC97"] = true
 ---------------------------------------------------
@@ -197,6 +196,10 @@ if (SOUNDS["AC97"]~=null) then
 		MAME_DIR .. "src/devices/sound/pci-ac97.h",
 	}
 end
+
+
+
+---------------------------------------------------
 -- CEM 3394 analog synthesizer chip
 --@src/devices/sound/cem3394.h,SOUNDS["CEM3394"] = true
 ---------------------------------------------------
@@ -205,6 +208,20 @@ if (SOUNDS["CEM3394"]~=null) then
 	files {
 		MAME_DIR .. "src/devices/sound/cem3394.cpp",
 		MAME_DIR .. "src/devices/sound/cem3394.h",
+	}
+end
+
+
+
+---------------------------------------------------
+-- Creative Labs CT1745 SB16 Mixer
+--@src/devices/sound/ct1745.h,SOUNDS["CT1745"] = true
+---------------------------------------------------
+
+if (SOUNDS["CT1745"]~=null) then
+	files {
+		MAME_DIR .. "src/devices/sound/ct1745.cpp",
+		MAME_DIR .. "src/devices/sound/ct1745.h",
 	}
 end
 
@@ -1408,18 +1425,6 @@ if (SOUNDS["AD1848"]~=null) then
 end
 
 ---------------------------------------------------
--- UPD1771
---@src/devices/sound/upd1771.h,SOUNDS["UPD1771"] = true
----------------------------------------------------
-
-if (SOUNDS["UPD1771"]~=null) then
-	files {
-		MAME_DIR .. "src/devices/sound/upd1771.cpp",
-		MAME_DIR .. "src/devices/sound/upd1771.h",
-	}
-end
-
----------------------------------------------------
 -- GB_SOUND
 --@src/devices/sound/gb.h,SOUNDS["GB_SOUND"] = true
 ---------------------------------------------------
@@ -1463,18 +1468,6 @@ if (SOUNDS["MM5837"]~=null) then
 	files {
 		MAME_DIR .. "src/devices/sound/mm5837.cpp",
 		MAME_DIR .. "src/devices/sound/mm5837.h",
-	}
-end
-
----------------------------------------------------
--- Intelligent Designs DAVE
---@src/devices/sound/dave.h,SOUNDS["DAVE"] = true
----------------------------------------------------
-
-if (SOUNDS["DAVE"]~=null) then
-	files {
-		MAME_DIR .. "src/devices/sound/dave.cpp",
-		MAME_DIR .. "src/devices/sound/dave.h",
 	}
 end
 
@@ -1763,5 +1756,17 @@ if (SOUNDS["CF61909"]~=null) then
 	files {
 		MAME_DIR .. "src/devices/sound/cf61909.cpp",
 		MAME_DIR .. "src/devices/sound/cf61909.h",
+	}
+end
+
+---------------------------------------------------
+-- NEC uPD65043GF-U01
+--@src/devices/sound/upd65043gfu01.h,SOUNDS["UPD65043GFU01"] = true
+---------------------------------------------------
+
+if (SOUNDS["UPD65043GFU01"]~=null) then
+	files {
+		MAME_DIR .. "src/devices/sound/upd65043gfu01.cpp",
+		MAME_DIR .. "src/devices/sound/upd65043gfu01.h",
 	}
 end

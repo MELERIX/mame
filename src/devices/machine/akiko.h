@@ -48,10 +48,10 @@ public:
 
 protected:
 	// device-level overrides
-	virtual void device_start() override;
-	virtual void device_stop() override;
-	virtual void device_reset() override;
-	virtual void device_add_mconfig(machine_config &config) override;
+	virtual void device_start() override ATTR_COLD;
+	virtual void device_stop() override ATTR_COLD;
+	virtual void device_reset() override ATTR_COLD;
+	virtual void device_add_mconfig(machine_config &config) override ATTR_COLD;
 
 private:
 	// 1X CDROM sector time in msec (300KBps)
@@ -92,6 +92,7 @@ private:
 
 	emu_timer *m_dma_timer;
 	emu_timer *m_frame_timer;
+	emu_timer *m_toc_timer;
 
 	void nvram_write(uint32_t data);
 	uint32_t nvram_read();

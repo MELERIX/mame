@@ -96,7 +96,8 @@ tharrier test mode:
 1)  Press player 2 buttons 1+2 during reset.  "Are you ready?" will appear
 2)  Press player 1 buttons in this sequence:
     2,1,2,2,1,1,↓,↓
-Note: this doesn't currently work, the message never appears (most likely an error in the protection simulation).
+Note: this only works in the bootleg, the message never appears in the original
+because of incomplete MCU simulation
 
 tdragon and hachamf test mode:
 
@@ -366,6 +367,88 @@ u16 nmk16_state::tharrier_mcu_r(offs_t offset, u16 mem_mask)
 	}
 }
 
+
+/***************************************************************************
+
+  tharrierb MCU emulation
+
+***************************************************************************/
+
+u16 tharrierb_state::mcu_status_r(offs_t offset, u16 mem_mask)
+{
+	u16 data = 0;
+
+	// bit 15 mcu status? other bits unused?
+	if (ACCESSING_BITS_8_15)
+		data |= 0x8000;
+
+	return data;
+}
+
+u16 tharrierb_state::mcu_data_r(offs_t offset, u16 mem_mask)
+{
+	u16 data = 0;
+
+	if (ACCESSING_BITS_0_7)
+		data |= m_mcu_out_latch_lsb << 0;
+
+	if (ACCESSING_BITS_8_15)
+		data |= m_mcu_out_latch_msb << 8;
+
+	return data;
+}
+
+void tharrierb_state::mcu_control_w(offs_t offset, u16 data, u16 mem_mask)
+{
+	// bit 0 mcu interrupt. other bits unused?
+	if (ACCESSING_BITS_0_7)
+		m_mcu->set_input_line(M68705_IRQ_LINE, BIT(~data, 0));
+}
+
+void tharrierb_state::mcu_data_w(offs_t offset, u16 data, u16 mem_mask)
+{
+	if (ACCESSING_BITS_0_7)
+		m_mcu_in_latch = data;
+}
+
+void tharrierb_state::mcu_porta_w(u8 data)
+{
+	m_mcu_out_latch_msb = data;
+}
+
+void tharrierb_state::mcu_portb_w(u8 data)
+{
+	m_mcu_out_latch_lsb = data;
+}
+
+u8 tharrierb_state::mcu_portb_r()
+{
+	return m_mcu_in_latch;
+}
+
+void tharrierb_state::mcu_portc_w(u8 data)
+{
+	// 7-------  set at start of mcu ack function, unset at end
+	// -6------  unset to enable read for port b latch
+	// --5-----  unset at mcu reset and set after mcu memory init
+	// ---4----  toggled after mcu reset and in mcu int
+	// ----3---  unused
+	// -----210  port d data source (inputs)
+
+	m_mcu_portc = data;
+}
+
+u8 tharrierb_state::mcu_portd_r()
+{
+	u8 select = m_mcu_portc & 0x07;
+
+	if (select < 5)
+		return m_inputs[select]->read();
+	else
+		return 0;
+}
+
+
 /***************************************************************************
 
   VRAM handlers
@@ -528,6 +611,25 @@ void nmk16_state::tharrier_map(address_map &map)
 	map(0x09c000, 0x09c7ff).ram(); // Unused txvideoram area?
 	map(0x09d000, 0x09d7ff).ram().w(FUNC(nmk16_state::txvideoram_w)).share("txvideoram");
 	map(0x0f0000, 0x0fffff).ram().w(FUNC(nmk16_state::mainram_strange_w)).share("mainram");
+}
+
+void tharrierb_state::tharrierb_map(address_map &map)
+{
+	map(0x000000, 0x03ffff).rom();
+	map(0x080000, 0x080001).mirror(0xf00).r(FUNC(tharrierb_state::mcu_status_r));
+	map(0x080002, 0x080003).mirror(0xf00).r(FUNC(tharrierb_state::mcu_data_r));
+	map(0x08000f, 0x08000f).r("soundlatch2", FUNC(generic_latch_8_device::read));
+	map(0x080010, 0x080011).mirror(0xf00).nopr().w(FUNC(tharrierb_state::mcu_control_w));
+	map(0x080012, 0x080013).mirror(0xf00).nopr().w(FUNC(tharrierb_state::mcu_data_w));
+	map(0x080014, 0x080015).unmaprw(); // flipscreen
+	map(0x08001c, 0x08001d).unmaprw(); // sound cpu reset
+	map(0x08001f, 0x08001f).w(m_soundlatch, FUNC(generic_latch_8_device::write));
+	map(0x088000, 0x0883ff).ram().w(m_palette, FUNC(palette_device::write16)).share("palette");
+	map(0x090000, 0x093fff).ram().w(FUNC(tharrierb_state::bgvideoram_w<0>)).share("bgvideoram0");
+	map(0x09c000, 0x09cfff).ram(); // verified in test mode
+	map(0x09d000, 0x09d7ff).ram().w(FUNC(tharrierb_state::txvideoram_w)).share("txvideoram");
+	map(0x09d800, 0x09dfff).ram(); // verified in test mode
+	map(0x0f0000, 0x0fffff).ram().w(FUNC(tharrierb_state::mainram_strange_w)).share("mainram");
 }
 
 void nmk16_state::tharrier_sound_map(address_map &map)
@@ -693,7 +795,7 @@ void nmk16_state::bioship_map(address_map &map)
 void nmk16_state::hachamf_map(address_map &map)
 {
 	map(0x000000, 0x03ffff).rom();
-	// I/O Region
+
 	map(0x080000, 0x080001).portr("IN0");
 	map(0x080002, 0x080003).portr("IN1");
 	map(0x080008, 0x080009).portr("DSW1");
@@ -704,18 +806,12 @@ void nmk16_state::hachamf_map(address_map &map)
 	map(0x080019, 0x080019).w(FUNC(nmk16_state::tilebank_w));
 	map(0x08001f, 0x08001f).w(m_nmk004, FUNC(nmk004_device::write));
 
-
-	// Video Region
 	map(0x088000, 0x0887ff).ram().w(m_palette, FUNC(palette_device::write16)).share("palette");
 	map(0x08c000, 0x08c007).w(FUNC(nmk16_state::scroll_w<0>)).umask16(0x00ff);
 	map(0x090000, 0x093fff).ram().w(FUNC(nmk16_state::bgvideoram_w<0>)).share("bgvideoram0");
 	map(0x09c000, 0x09c7ff).ram().w(FUNC(nmk16_state::txvideoram_w)).share("txvideoram");
-	// Main RAM, inc sprites, shared with MCU
-
-	map(0x0f0000, 0x0fffff).ram().share("mainram"); // ram is shared with MCU
+	map(0x0f0000, 0x0fffff).ram().share("mainram"); // Main RAM, inc sprites, shared with MCU
 }
-
-
 
 void nmk16_state::tdragon_map(address_map &map)
 {
@@ -1542,6 +1638,81 @@ static INPUT_PORTS_START( tharrier )
 	PORT_BIT( 0x8000, IP_ACTIVE_HIGH, IPT_UNKNOWN ) //coin ?
 INPUT_PORTS_END
 
+static INPUT_PORTS_START( tharrierb )
+	PORT_START("P1")
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_UNUSED )
+	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_BUTTON1 )                  PORT_PLAYER(1)
+	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_BUTTON2 )                  PORT_PLAYER(1)
+	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_JOYSTICK_RIGHT ) PORT_8WAY PORT_PLAYER(1)
+	PORT_BIT( 0x10, IP_ACTIVE_HIGH, IPT_JOYSTICK_LEFT )  PORT_8WAY PORT_PLAYER(1)
+	PORT_BIT( 0x20, IP_ACTIVE_HIGH, IPT_JOYSTICK_DOWN )  PORT_8WAY PORT_PLAYER(1)
+	PORT_BIT( 0x40, IP_ACTIVE_HIGH, IPT_JOYSTICK_UP )    PORT_8WAY PORT_PLAYER(1)
+	PORT_BIT( 0x80, IP_ACTIVE_HIGH, IPT_UNUSED )
+
+	PORT_START("P2")
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_UNUSED )
+	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_BUTTON1 )                  PORT_PLAYER(2)
+	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_BUTTON2 )                  PORT_PLAYER(2)
+	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_JOYSTICK_RIGHT ) PORT_8WAY PORT_PLAYER(2)
+	PORT_BIT( 0x10, IP_ACTIVE_HIGH, IPT_JOYSTICK_LEFT )  PORT_8WAY PORT_PLAYER(2)
+	PORT_BIT( 0x20, IP_ACTIVE_HIGH, IPT_JOYSTICK_DOWN )  PORT_8WAY PORT_PLAYER(2)
+	PORT_BIT( 0x40, IP_ACTIVE_HIGH, IPT_JOYSTICK_UP )    PORT_8WAY PORT_PLAYER(2)
+	PORT_BIT( 0x80, IP_ACTIVE_HIGH, IPT_UNUSED )
+
+	PORT_START("BUTTONS")
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_UNUSED )
+	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_START2 )
+	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_START1 )
+	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_UNUSED )
+	PORT_BIT( 0x10, IP_ACTIVE_HIGH, IPT_COIN1 ) // COIN2 in test mode
+	PORT_BIT( 0x20, IP_ACTIVE_HIGH, IPT_COIN2 ) // COIN1 in test mode (not supported by game?)
+	PORT_BIT( 0xc0, IP_ACTIVE_HIGH, IPT_UNUSED )
+
+	PORT_START("DSW1") // DIP2 in test mode
+	PORT_DIPNAME( 0x03, 0x00, DEF_STR( Lives ) )      PORT_DIPLOCATION("DSW1:!1,!2")
+	PORT_DIPSETTING(    0x00, "3" )
+	PORT_DIPSETTING(    0x01, "2" )
+	PORT_DIPSETTING(    0x02, "4" )
+	PORT_DIPSETTING(    0x03, "5" )
+	PORT_DIPNAME( 0x0c, 0x00, DEF_STR( Bonus_Life ) ) PORT_DIPLOCATION("DSW1:!4,!3")
+	PORT_DIPSETTING(    0x00, "200k" )
+	PORT_DIPSETTING(    0x04, DEF_STR( None ) )
+	PORT_DIPSETTING(    0x08, "200k/1000k" )
+	PORT_DIPSETTING(    0x0c, "200k/500k/1000k/2000k/3000k/5000k" )
+	PORT_DIPNAME( 0x30, 0x00, DEF_STR( Difficulty ) ) PORT_DIPLOCATION("DSW1:!6,!5")
+	PORT_DIPSETTING(    0x00, DEF_STR( Normal ) )
+	PORT_DIPSETTING(    0x10, DEF_STR( Easy ) )
+	PORT_DIPSETTING(    0x20, DEF_STR( Hard ) )
+	PORT_DIPSETTING(    0x30, DEF_STR( Hardest ) )
+	PORT_DIPUNUSED_DIPLOC(0x40, 0x00, "DSW1:!7")
+	PORT_DIPNAME( 0x80, 0x00, DEF_STR( Cabinet ) )    PORT_DIPLOCATION("DSW1:!8")
+	PORT_DIPSETTING(    0x00, DEF_STR( Upright ) )
+	PORT_DIPSETTING(    0x80, DEF_STR( Cocktail ) )
+
+	PORT_START("DSW2") // DIP1 in test mode
+	PORT_DIPNAME( 0x07, 0x00, DEF_STR( Coin_B ) )      PORT_DIPLOCATION("DSW2:!1,!2,!3")
+	PORT_DIPSETTING(    0x00, DEF_STR( 1C_1C ) )
+	PORT_DIPSETTING(    0x01, DEF_STR( 1C_2C ) )
+	PORT_DIPSETTING(    0x02, DEF_STR( 1C_3C ) )
+	PORT_DIPSETTING(    0x03, DEF_STR( 1C_4C ) )
+	PORT_DIPSETTING(    0x04, DEF_STR( 2C_1C ) )
+	PORT_DIPSETTING(    0x05, DEF_STR( 3C_1C ) )
+	PORT_DIPSETTING(    0x06, DEF_STR( 4C_1C ) )
+	PORT_DIPSETTING(    0x07, DEF_STR( Free_Play ) )
+	PORT_DIPNAME( 0x38, 0x00, DEF_STR( Coin_A ) )      PORT_DIPLOCATION("DSW2:!4,!5,!6")
+	PORT_DIPSETTING(    0x00, DEF_STR( 1C_1C ) )
+	PORT_DIPSETTING(    0x08, DEF_STR( 1C_2C ) )
+	PORT_DIPSETTING(    0x10, DEF_STR( 1C_3C ) )
+	PORT_DIPSETTING(    0x18, DEF_STR( 1C_4C ) )
+	PORT_DIPSETTING(    0x20, DEF_STR( 2C_1C ) )
+	PORT_DIPSETTING(    0x28, DEF_STR( 3C_1C ) )
+	PORT_DIPSETTING(    0x30, DEF_STR( 4C_1C ) )
+	PORT_DIPSETTING(    0x38, DEF_STR( Free_Play ) )
+	PORT_DIPNAME( 0x40, 0x00, DEF_STR( Demo_Sounds ) ) PORT_DIPLOCATION("DSW2:!7")
+	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
+	PORT_DIPSETTING(    0x40, DEF_STR( Off ) )
+	PORT_DIPUNUSED_DIPLOC(0x80, 0x00, "DSW2:!8")
+INPUT_PORTS_END
 
 static INPUT_PORTS_START( mustang )
 	PORT_START("IN0")
@@ -4022,13 +4193,24 @@ GFXDECODE_END
 
 void nmk16_state::machine_start()
 {
-	save_item(NAME(m_interrupt_trigger));
+	save_item(NAME(m_vtiming_val));
 }
 
 void nmk16_state::machine_reset()
 {
-	m_interrupt_trigger = 0x01;
+	m_vtiming_val = 0xff;
 }
+
+void tharrierb_state::machine_start()
+{
+	nmk16_state::machine_start();
+
+	save_item(NAME(m_mcu_out_latch_msb));
+	save_item(NAME(m_mcu_out_latch_lsb));
+	save_item(NAME(m_mcu_in_latch));
+	save_item(NAME(m_mcu_portc));
+}
+
 
 /***************************************************************************
 
@@ -4104,7 +4286,7 @@ void nmk16_state::machine_reset()
 
 
   For V-timing PROM, it's tipically a 82S135 (256x8bit) (first 117 entries are not used). Some games (such as Comad
-  ones) use a 82S147 (512x8bit) with A5 tied to GND, using only half of the total space. TODO: currently unsupported
+  ones) use a 82S147 (512x8bit) with A5 tied to GND, using only half of the total space.
   The format is:
 
     Offset  Bits         Description
@@ -4213,17 +4395,17 @@ void nmk16_state::set_screen_hires(machine_config &config)
 */
 TIMER_DEVICE_CALLBACK_MEMBER(nmk16_state::nmk16_scanline)
 {
-//  constexpr int SPRDMA_INDEX = 0;  // not used in emulation TODO: check if it could be used to trigger the sprite DMA instead of setting it 4 lines after VBOUT
-//  constexpr int VSYNC_INDEX  = 1;  // not used in emulation
-//  constexpr int VBLANK_INDEX = 2;  // not used in emulation
-//  constexpr int NOT_USED     = 3;  // not used in emulation
+	constexpr int SPRDMA_INDEX = 0;
+//  constexpr int VSYNC_INDEX  = 1; // not used in emulation
+//  constexpr int VBLANK_INDEX = 2; // not used in emulation
+//  constexpr int NOT_USED     = 3; // not used in emulation
 	constexpr int IPL0_INDEX   = 4;
 	constexpr int IPL1_INDEX   = 5;
 	constexpr int IPL2_INDEX   = 6;
 	constexpr int TRIGG_INDEX  = 7;
 
-	constexpr int PROM_START_OFFSET = 0x75;  // previous entries are never addressed
-	constexpr int PROM_FRAME_OFFSET = 0x0b;  // first 11 "used" entries (from 0x75 to 0x7f: 0xb entries) are prior to start of frame, which occurs on 0x80 address (128 entry)
+	constexpr int PROM_START_OFFSET = 0x75; // previous entries are never addressed
+	constexpr int PROM_FRAME_OFFSET = 0x0b; // first 11 "used" entries (from 0x75 to 0x7f: 0xb entries) are prior to start of frame, which occurs on 0x80 address (128 entry)
 
 	u8 *prom = m_vtiming_prom->base();
 	int len = m_vtiming_prom->bytes();
@@ -4233,33 +4415,28 @@ TIMER_DEVICE_CALLBACK_MEMBER(nmk16_state::nmk16_scanline)
 	// every PROM entry is addressed each 2 scanlines, so only even lines are actually addressing it:
 	if ((scanline & 0x1) == 0x0)
 	{
+		u8 address = ((((scanline / 2) + PROM_FRAME_OFFSET) % (0x100 - PROM_START_OFFSET)) + PROM_START_OFFSET) % len;
 
-		int promAddress = (((scanline / 2) + PROM_FRAME_OFFSET) % (len - PROM_START_OFFSET)) + PROM_START_OFFSET;
+		LOG("nmk16_scanline: Scanline: %03d - Current PROM entry: %03d\n", scanline, address);
 
-		LOG("nmk16_scanline: Scanline: %03d - Current PROM entry: %03d\n", scanline, promAddress);
+		u8 val = prom[address];
 
-		u8 val = prom[promAddress];
-
-		// Interrupt requests are triggered at raising edge of bit 7:
-		u8 trigger = BIT(val, TRIGG_INDEX);
-		if (m_interrupt_trigger == 0 && trigger == 1)
+		// Interrupt requests are triggered at rising edge of bit 7:
+		if (BIT(val & ~m_vtiming_val, TRIGG_INDEX))
 		{
-
 			u8 int_level = bitswap<3>(val, IPL2_INDEX, IPL1_INDEX, IPL0_INDEX);
 			if (int_level > 0)
 			{
 				LOG("nmk16_scanline: Triggered interrupt: IRQ%d at scanline: %03d\n", int_level, scanline);
 				m_maincpu->set_input_line(int_level, HOLD_LINE);
 			}
-
-			// Triggered at VBOUT. TODO: check if this could be triggered using SPRDMA_INDEX instead
-			if (int_level == 4)
-			{
-				m_dma_timer->adjust(m_screen->time_until_pos(scanline + 4)); // as per UPL docs, 256 usec after VBOUT = 4 lines, but index on the PROM says otherwise.
-			}
 		}
 
-		m_interrupt_trigger = trigger;
+		// Sprite DMA, as per UPL docs, 256 usec after VBOUT = 4 lines, but index on the PROM says otherwise:
+		if (BIT(val & ~m_vtiming_val, SPRDMA_INDEX))
+			sprite_dma();
+
+		m_vtiming_val = val;
 	}
 }
 
@@ -4286,7 +4463,7 @@ Timing:
 LV4         LV2 LV1        LV1
  |        DISPLAY
  |<->|<--->| |
- |256| 694 | |
+ |128| 694 | |
  | us| usec| |
  |   | DMA | |
 
@@ -4305,17 +4482,18 @@ TIMER_DEVICE_CALLBACK_MEMBER(nmk16_state::nmk16_hacky_scanline)
 {
 	const int VBIN_SCANLINE = 16;
 	const int VBOUT_SCANLINE = VBIN_SCANLINE + 224;    // VBIN + 224 lines high of active video
-	const int SPRDMA_SCANLINE = VBOUT_SCANLINE + 4;    // 256 usec after VBOUT = 4 lines (each line is 64 USEC)
+	const int SPRDMA_SCANLINE = VBOUT_SCANLINE + 2;    // 2 lines after VBOUT
 	const int IRQ1_SCANLINE_1 = VBIN_SCANLINE + 52;    // 52 lines after VBIN and 68 from the start of frame
 	const int IRQ1_SCANLINE_2 = IRQ1_SCANLINE_1 + 128; // 128 lines after IRQ1_SCANLINE_1
 
 	int scanline = param;
 
 	if (scanline == VBOUT_SCANLINE) // vblank-out irq
-	{
 		m_maincpu->set_input_line(4, HOLD_LINE);
-		m_dma_timer->adjust(m_screen->time_until_pos(SPRDMA_SCANLINE)/*attotime::from_usec(256)*/);
-	}
+
+	// sprite DMA after VBOUT
+	if (scanline == SPRDMA_SCANLINE)
+		sprite_dma();
 
 	/* Vblank-in irq, Vandyke definitely relies that irq fires at scanline ~0 instead of 112 (as per previous
 	  cpu_getiloops function implementation), mostly noticeable with sword collisions and related attract mode behaviour. */
@@ -4336,7 +4514,7 @@ void nmk16_state::set_hacky_interrupt_timing(machine_config &config)
 	TIMER(config, "scantimer").configure_scanline(FUNC(nmk16_state::nmk16_hacky_scanline), "screen", 0, 1);
 }
 
-TIMER_CALLBACK_MEMBER(nmk16_state::dma_callback)
+void nmk16_state::sprite_dma()
 {
 	// 2 buffers confirmed on PCB, 1 on sabotenb
 	memcpy(m_spriteram_old2.get(),m_spriteram_old.get(), 0x1000);
@@ -4386,6 +4564,22 @@ void nmk16_state::tharrier(machine_config &config)
 	OKIM6295(config, m_oki[1], XTAL(4'000'000), okim6295_device::PIN7_LOW);
 	m_oki[1]->set_addrmap(0, &nmk16_state::oki2_map);
 	m_oki[1]->add_route(ALL_OUTPUTS, "mono", 0.10);
+}
+
+void tharrierb_state::tharrierb(machine_config &config)
+{
+	tharrier(config);
+
+	m_maincpu->set_addrmap(AS_PROGRAM, &tharrierb_state::tharrierb_map);
+
+	M68705R3(config, m_mcu, XTAL(4'915'200) / 2); // unknown clock
+	m_mcu->porta_w().set(FUNC(tharrierb_state::mcu_porta_w));
+	m_mcu->portb_r().set(FUNC(tharrierb_state::mcu_portb_r));
+	m_mcu->portb_w().set(FUNC(tharrierb_state::mcu_portb_w));
+	m_mcu->portc_w().set(FUNC(tharrierb_state::mcu_portc_w));
+	m_mcu->portd_r().set(FUNC(tharrierb_state::mcu_portd_r));
+
+	config.set_perfect_quantum(m_maincpu);
 }
 
 void nmk16_state::mustang(machine_config &config)
@@ -4897,7 +5091,7 @@ void nmk16_state::ssmissin(machine_config &config)
 	// basic machine hardware
 	M68000(config, m_maincpu, 8000000); // 8 Mhz
 	m_maincpu->set_addrmap(AS_PROGRAM, &nmk16_state::ssmissin_map);
-	set_hacky_interrupt_timing(config);
+	set_interrupt_timing(config);
 
 	Z80(config, m_audiocpu, 8000000/2); // 4 Mhz
 	m_audiocpu->set_addrmap(AS_PROGRAM, &nmk16_state::ssmissin_sound_map);
@@ -4994,10 +5188,11 @@ void nmk16_state::strahljbl(machine_config &config)
 	seibu_sound.ym_write_callback().set("ymsnd", FUNC(ym3812_device::write));
 }
 
+// OSC : 10MHz, 12MHz, 16MHz
 void nmk16_state::hachamf(machine_config &config)
 {
 	// basic machine hardware
-	M68000(config, m_maincpu, 10000000); // 10 MHz ?
+	M68000(config, m_maincpu, 10000000); // MC68000P10, 10 MHz ?
 	m_maincpu->set_addrmap(AS_PROGRAM, &nmk16_state::hachamf_map);
 	set_interrupt_timing(config);
 
@@ -5032,8 +5227,16 @@ void nmk16_state::hachamf(machine_config &config)
 	m_oki[1]->add_route(ALL_OUTPUTS, "mono", 0.10);
 }
 
-u8 tdragon_prot_state::mcu_port7_r()
+void tdragon_prot_state::hachamf_prot(machine_config &config)
 {
+	hachamf(config);
+
+	TMP91640(config, m_protcpu, 4000000); // Toshiba TMP91640 marked as NMK-113, with 16Kbyte internal ROM, 512bytes internal RAM
+	m_protcpu->set_addrmap(AS_PROGRAM, &tdragon_prot_state::tdragon_prot_map);
+	m_protcpu->port_write<6>().set(FUNC(tdragon_prot_state::mcu_port6_w));
+	m_protcpu->port_read<5>().set(FUNC(tdragon_prot_state::mcu_port5_r));
+	m_protcpu->port_read<6>().set(FUNC(tdragon_prot_state::mcu_port6_r));
+
 	// The NMK-113 code contains multiple different codepaths, which appear to be for different games
 	// a value is read from port 7, and masked with 0xf
 	// This happens in various places in the code, with 5 different possible startup programs, and
@@ -5057,20 +5260,7 @@ u8 tdragon_prot_state::mcu_port7_r()
 	// 0x0d - unknown
 	// 0x0e - Double Dealer (but we use the single game 110 found on a Double Dealer PCB)
 	// 0x0f - Thunder Dragon (but we use the single game 110 found on a Thunder Dragon PCB)
-
-	return 0x0c;
-}
-
-void tdragon_prot_state::hachamf_prot(machine_config &config)
-{
-	hachamf(config);
-
-	TMP91640(config, m_protcpu, 4000000); // Toshiba TMP91640 marked as NMK-113, with 16Kbyte internal ROM, 512bytes internal RAM
-	m_protcpu->set_addrmap(AS_PROGRAM, &tdragon_prot_state::tdragon_prot_map);
-	m_protcpu->port_write<6>().set(FUNC(tdragon_prot_state::mcu_port6_w));
-	m_protcpu->port_read<5>().set(FUNC(tdragon_prot_state::mcu_port5_r));
-	m_protcpu->port_read<6>().set(FUNC(tdragon_prot_state::mcu_port6_r));
-	m_protcpu->port_read<7>().set(FUNC(tdragon_prot_state::mcu_port7_r));
+	m_protcpu->port_read<7>().set_constant(0x0c);
 
 	config.set_maximum_quantum(attotime::from_hz(6000));
 }
@@ -5393,6 +5583,14 @@ void nmk16_state::bjtwin(machine_config &config)
 	nmk112.set_rom1_tag("oki2");
 }
 
+void nmk16_state::cactus(machine_config &config)
+{
+	bjtwin(config);
+
+	config.device_remove("scantimer");
+	set_hacky_interrupt_timing(config);
+}
+
 // The 215 writes minimal data here to select an unscrambling configuration hardwired inside the NMK214 chip.
 void macross_prot_state::mcu_port3_to_214_w(u8 data)
 {
@@ -5464,7 +5662,6 @@ void macross_prot_state::base_nmk214_215(machine_config &config)
 void macross_prot_state::macross_prot(machine_config &config)
 {
 	macross(config);
-
 	base_nmk214_215(config);
 
 	config.set_maximum_quantum(attotime::from_hz(6000));
@@ -5473,9 +5670,7 @@ void macross_prot_state::macross_prot(machine_config &config)
 void macross_prot_state::gunnail_prot(machine_config &config)
 {
 	gunnail(config);
-
 	set_interrupt_timing(config);
-
 	base_nmk214_215(config);
 
 	config.set_maximum_quantum(attotime::from_hz(6000));
@@ -5484,7 +5679,6 @@ void macross_prot_state::gunnail_prot(machine_config &config)
 void macross_prot_state::bjtwin_prot(machine_config &config)
 {
 	bjtwin(config);
-
 	base_nmk214_215(config);
 
 	config.set_maximum_quantum(attotime::from_hz(6000));
@@ -5905,6 +6099,18 @@ void nmk16_state::decode_ssmissin()
 	for (int A = 0; A < len; A++)
 	{
 		rom[A] = decode_byte(rom[A], decode_data_ssmissingfx[0]);
+	}
+
+	// Vertical timing ROM is half empty
+	rom = memregion("vtiming")->base();
+	len = memregion("vtiming")->bytes();
+	assert(len == 0x200);
+	for (int A = 0; A < len; A++)
+	{
+		if (A < 0x100)
+			rom[A] = rom[(A & 0x1f) | (A << 1 & 0x1c0)];
+		else
+			rom[A] = 0;
 	}
 }
 
@@ -6578,7 +6784,7 @@ ROM_START( tharrierb )
 	ROM_LOAD( "s1.512", 0x00000, 0x10000, CRC(b959f837) SHA1(073b14935e7d5b0cad19a3471fd26e9e3a363827) )
 
 	ROM_REGION( 0x1000, "mcu", 0 )
-	ROM_LOAD( "mc68705r35", 0x0000, 0x1000, NO_DUMP ) // doesn't seem to be used by the game. Possibly empty or leftover from a conversion?
+	ROM_LOAD( "mc68705r35.bin", 0x0000, 0x1000, CRC(c560798b) SHA1(aae2a04914f0253102024e1af76bcf68637f3aba) )
 
 	ROM_REGION( 0x8000, "fgtile", 0 )
 	ROM_LOAD( "t.256", 0x0000, 0x8000, CRC(4e9a7e0b) SHA1(ff143d1e01e865a62ecc695fe3359a2a0eacee05) ) // half size if compared to the original
@@ -6630,6 +6836,12 @@ ROM_START( tharrierb )
 	ROM_LOAD( "18h.512", 0x50000, 0x10000, CRC(370a2fbd) SHA1(9cdf8a6155a8afb4472f23df9d62f6a4e62fff30) )
 	ROM_LOAD( "19h.512", 0x60000, 0x10000, CRC(64e58cfe) SHA1(0310f5504513a8b0be20cfc337a038fcf7925131) )
 	ROM_LOAD( "20h.512", 0x70000, 0x10000, CRC(5ccd9205) SHA1(6e5443d6af5a896d6dd4b4e06d5c3151826bf8b5) )
+
+	ROM_REGION( 0x0100, "htiming", 0 )
+	ROM_LOAD( "22.bpr", 0x0000, 0x0100, CRC(cfdbb86c) SHA1(588822f6308a860937349c9106c2b4b1a75823ec) )  // 82S129
+
+	ROM_REGION( 0x0100, "vtiming", 0 )
+	ROM_LOAD( "21.bpr", 0x0000, 0x0100, CRC(fcd5efea) SHA1(cbda6b14127dabd1788cc256743cf62efaa5e8c4) )  // 82S135
 ROM_END
 
 
@@ -7205,7 +7417,7 @@ ROM_START( tdragon1 )
 	ROM_LOAD16_BYTE( "thund.8",  0x00000, 0x20000, CRC(edd02831) SHA1(d6bc8d2c37707768a8bf666090f33eea12dda336) )
 	ROM_LOAD16_BYTE( "thund.7",  0x00001, 0x20000, CRC(52192fe5) SHA1(9afef197410e7feb71dc48003e181fbbaf5c99b2) )
 
-	ROM_REGION( 0x04000, "protcpu", ROMREGION_ERASE00 )
+	ROM_REGION( 0x04000, "protcpu", 0 )
 	ROM_LOAD( "nmk-110-tdragon.bin", 0x00000, 0x4000, CRC(cf66a660) SHA1(a1d3346f7688e9bf5513194a2890a9a6aaf28742) ) // 910527 and "SLASH META" for game name string (Slash Metal was an earlier name for the game, tiles still exist in ROM)
 
 	ROM_REGION( 0x020000, "fgtile", 0 )
@@ -9681,7 +9893,7 @@ ROM_START( redfoxwp2a )
 	ROM_LOAD( "afega_af1-b2.uc8", 0x000000, 0x200000, CRC(d68588c2) SHA1(c5f397d74a6ecfd2e375082f82e37c5a330fba62) )
 	ROM_LOAD( "afega_af1-b1.uc3", 0x200000, 0x200000, CRC(f8b200a8) SHA1(a6c43dd57b752d87138d7125b47dc0df83df8987) )
 
-	ROM_REGION( 0x10000, "fgtile", ROMREGION_ERASEFF )    // Layer 1, 8x8x4
+	ROM_REGION( 0x10000, "fgtile", 0 )    // Layer 1, 8x8x4
 	ROM_LOAD( "afega_3.u4", 0x000000, 0x10000, CRC(64608687) SHA1(c13e55429171653437c8e8c7c8e9c6c5ffa2d2dc) )
 
 	ROM_REGION( 0x40000, "oki1", 0 )    // Samples
@@ -10225,7 +10437,7 @@ ROM_START( spec2kh )
 	ROM_LOAD( "u153.bin", 0x000000, 0x200000, CRC(a00bbf8f) SHA1(622f52ef50d52cdd5e6b250d68439caae5c13404) ) // UC2 MX29F1610ML Flash ROM
 	ROM_LOAD( "u152.bin", 0x200000, 0x200000, CRC(f6423fab) SHA1(253e0791eb58efa1df42e9c74d397e6e65c8c252) ) // UC3 MX29F1610ML Flash ROM
 
-	ROM_REGION( 0x20000, "fgtile", ROMREGION_ERASEFF )    // Layer 1, 8x8x4
+	ROM_REGION( 0x20000, "fgtile", 0 )    // Layer 1, 8x8x4
 	ROM_LOAD( "yonatech4.u3", 0x00000, 0x20000, CRC(5626b08e) SHA1(63207ed6b4fc8684690bf3fe1991a4f3babd73e8) )
 
 	ROM_REGION( 0x40000, "oki1", 0 ) // Samples
@@ -10250,7 +10462,7 @@ ROM_START( spec2k )
 	ROM_LOAD( "uc3", 0x000000, 0x200000, CRC(1d087122) SHA1(9e82c5f26c1387c6006cbd9248b333921388146c) )
 	ROM_LOAD( "uc2", 0x200000, 0x200000, CRC(998dc05c) SHA1(cadf8bb0b8944372fbce9934b93684749ebc3ba0) )
 
-	ROM_REGION( 0x20000, "fgtile", ROMREGION_ERASEFF )    // Layer 1, 8x8x4
+	ROM_REGION( 0x20000, "fgtile", 0 )    // Layer 1, 8x8x4
 	ROM_LOAD( "u3", 0x00000, 0x20000, CRC(921503b8) SHA1(dea6e9d47c9db83e79907bc0609a64176aff26bc) )
 
 	ROM_REGION( 0x40000, "oki1", 0 ) // Samples
@@ -10305,6 +10517,7 @@ ROM_START( twinactn )
 	ROM_LOAD( "afega.su13", 0x040000, 0x40000, CRC(30e1c306) SHA1(c859f11fd329793b11e96264e91c79a557b488a4) )
 ROM_END
 
+
 /***************************************************************************
 
 
@@ -10312,7 +10525,6 @@ ROM_END
 
 
 ***************************************************************************/
-
 
 GAME( 1989, tharrier,   0,        tharrier,     tharrier,     nmk16_state,        init_tharrier,        ROT270, "UPL",                          "Task Force Harrier", MACHINE_NO_COCKTAIL )
 GAME( 1989, tharrieru,  tharrier, tharrier,     tharrier,     nmk16_state,        init_tharrier,        ROT270, "UPL (American Sammy license)", "Task Force Harrier (US)", MACHINE_NO_COCKTAIL ) // US version but no regional notice
@@ -10368,7 +10580,7 @@ GAME( 1994, rapheroa,   arcadian, raphero,      raphero,      nmk16_state,      
 // both sets of both these games show a date of 9th Mar 1992 in the test mode, they look like different revisions so I doubt this is accurate
 GAME( 1992, sabotenb,   0,        bjtwin_prot, sabotenb,      macross_prot_state, empty_init,           ROT0,   "NMK / Tecmo",                  "Saboten Bombers (set 1)", 0 )
 GAME( 1992, sabotenba,  sabotenb, bjtwin_prot, sabotenb,      macross_prot_state, empty_init,           ROT0,   "NMK / Tecmo",                  "Saboten Bombers (set 2)", 0 )
-GAME( 1992, cactus,     sabotenb, bjtwin,      sabotenb,      nmk16_state,        init_nmk,             ROT0,   "bootleg",                      "Cactus (bootleg of Saboten Bombers)", 0 ) // PCB marked 'Cactus', no title screen
+GAME( 1992, cactus,     sabotenb, cactus,      sabotenb,      nmk16_state,        init_nmk,             ROT0,   "bootleg",                      "Cactus (bootleg of Saboten Bombers)", 0 ) // PCB marked 'Cactus', no title screen
 
 GAME( 1993, bjtwin,     0,        bjtwin_prot, bjtwin,        macross_prot_state, empty_init,           ROT270, "NMK",                          "Bombjack Twin (set 1)", 0 )
 GAME( 1993, bjtwina,    bjtwin,   bjtwin_prot, bjtwin,        macross_prot_state, empty_init,           ROT270, "NMK",                          "Bombjack Twin (set 2)", 0 )
@@ -10404,8 +10616,8 @@ GAME( 1991, tdragonb3,  tdragon,  tdragonb3,    tdragonb,     nmk16_state, empty
 GAME( 1992, strahljbl,  strahl,   strahljbl,    strahljbl,    nmk16_state, empty_init,           ROT0,   "bootleg",                       "Koutetsu Yousai Strahl (Japan, bootleg)", 0 )
 
 // these are bootlegs with tharrier like sound hw
-GAME( 1990, mustangb3,  mustang,  mustangb3,    mustang,      nmk16_state, empty_init,           ROT0,   "bootleg (Lettering)",           "US AAF Mustang (Lettering bootleg)", 0 )
-GAME( 1989, tharrierb,  tharrier, tharrier,     tharrier,     nmk16_state, init_tharrier,        ROT270, "bootleg (Lettering)",           "Task Force Harrier (Lettering bootleg)", 0 )
+GAME( 1990, mustangb3,  mustang,  mustangb3,    mustang,      nmk16_state,     empty_init,       ROT0,   "bootleg (Lettering)",           "US AAF Mustang (Lettering bootleg)", 0 )
+GAME( 1989, tharrierb,  tharrier, tharrierb,    tharrierb,    tharrierb_state, init_tharrier,    ROT270, "bootleg (Lettering)",           "Task Force Harrier (Lettering bootleg)", 0 )
 
 // bootleg with no audio CPU and only 1 Oki
 GAME( 1991, tdragonb2,  tdragon,  tdragonb2,    tdragonb2,    nmk16_state, init_tdragonb2,       ROT270, "bootleg",                       "Thunder Dragon (bootleg with reduced sound system)", MACHINE_IMPERFECT_SOUND | MACHINE_NOT_WORKING ) // runs too quickly, Oki sounds terrible (IRQ problems? works better commenting out IRQ1_SCANLINE_2)

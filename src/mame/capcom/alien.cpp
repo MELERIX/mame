@@ -144,8 +144,8 @@ private:
 
 	u32 screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
 
-	void alien_map(address_map &map);
-	void masmario2_map(address_map &map);
+	void alien_map(address_map &map) ATTR_COLD;
+	void masmario2_map(address_map &map) ATTR_COLD;
 
 	// devices
 	required_device<sh4_device> m_maincpu;
@@ -159,8 +159,8 @@ private:
 	required_ioport m_io_in0;
 	required_ioport m_io_in1;
 
-	virtual void machine_start() override;
-	virtual void machine_reset() override;
+	virtual void machine_start() override ATTR_COLD;
+	virtual void machine_reset() override ATTR_COLD;
 
 	template <unsigned N> void gpu_irq_w(int state);
 	INTERRUPT_GEN_MEMBER(sio_irq_w);
@@ -624,7 +624,7 @@ ROM_END
 ROM_START( dokodemo )
 	ROM_REGION32_LE( 0x1000000, "maincpu", 0 ) // BIOS code
 	ROM_LOAD32_WORD( "ic30", 0x000000, 0x400000, BAD_DUMP CRC(74687757) SHA1(96b6e3725bcf16e92c6966f9b9ce93cfdd7ba641) ) // needs verification if this game really use same boot ROMs as pingu/gekimaka
-	ROM_LOAD32_WORD( "ic33", 0x000002, 0x400000, BAD_DUMP CRC(ba2e6716) SHA1(49c5abb9d96e3f4a78ed4dced7a9f052a96b186d) ) // 
+	ROM_LOAD32_WORD( "ic33", 0x000002, 0x400000, BAD_DUMP CRC(ba2e6716) SHA1(49c5abb9d96e3f4a78ed4dced7a9f052a96b186d) ) //
 
 	ROM_REGION( 0x800100, "ymz770_flash1", ROMREGION_ERASEFF ) //sound samples flash rom, not really needed, programmed by boot loader
 	ROM_LOAD16_WORD_SWAP( "flash1", 0x000000, 0x800000, BAD_DUMP CRC(dda4879f) SHA1(4aa06247ca674e86be6c111db7f6abf1ed6e121d) )
@@ -673,7 +673,7 @@ ROM_END
 ROM_START( wontame )
 	ROM_REGION32_LE( 0x1000000, "maincpu", 0 ) // BIOS code
 	ROM_LOAD32_WORD( "ic30", 0x000000, 0x400000, BAD_DUMP CRC(74687757) SHA1(96b6e3725bcf16e92c6966f9b9ce93cfdd7ba641) ) // needs verification if this game really use same boot ROMs as pingu/gekimaka
-	ROM_LOAD32_WORD( "ic33", 0x000002, 0x400000, BAD_DUMP CRC(ba2e6716) SHA1(49c5abb9d96e3f4a78ed4dced7a9f052a96b186d) ) // 
+	ROM_LOAD32_WORD( "ic33", 0x000002, 0x400000, BAD_DUMP CRC(ba2e6716) SHA1(49c5abb9d96e3f4a78ed4dced7a9f052a96b186d) ) //
 
 	ROM_REGION( 0x800100, "ymz770_flash1", ROMREGION_ERASEFF )
 	ROM_LOAD16_WORD_SWAP( "flash1", 0x000000, 0x800000, BAD_DUMP CRC(056e982e) SHA1(4b29218b00d7023c0b748aae13752f0c12539750) )
