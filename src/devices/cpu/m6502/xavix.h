@@ -149,7 +149,7 @@ public:
 protected:
 	class mi_xavix : public memory_interface {
 	public:
-		xavix_device *base;
+		xavix_device *m_base;
 
 		mi_xavix(xavix_device *base);
 		virtual ~mi_xavix() {}
@@ -162,7 +162,7 @@ protected:
 
 	uint8_t m_databank;
 	uint8_t m_codebank;
-	uint32_t XPC;
+	uint32_t m_XPC;
 
 	xavix_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock);
 
@@ -178,11 +178,10 @@ protected:
 	virtual space_config_vector memory_space_config() const override;
 
 	address_space_config m_special_data_config;
-	address_space *m_special_data_space;
 	address_space_config m_lowbus_config;
 	address_space_config m_extbus_config;
-	address_space *m_lowbus_space;
-	address_space *m_extbus_space;
+	memory_access<15, 0, 0, ENDIANNESS_LITTLE>::specific m_lowbus;
+	memory_access<24, 0, 0, ENDIANNESS_LITTLE>::specific m_extbus;
 
 protected:
 	xavix_interrupt_vector_delegate m_vector_callback;
@@ -192,10 +191,10 @@ protected:
 	void set_databank(uint8_t bank);
 	uint8_t get_databank();
 
-	void write_special_stack(uint8_t data);
+	void write_special_stack(uint32_t addr, uint8_t data);
 	void dec_special_stack();
 	void inc_special_stack();
-	uint8_t read_special_stack();
+	uint8_t read_special_stack(uint32_t addr);
 
 	/* we store the additional 'codebank' used for far calls in a different, private stack
 	   this seems to be neccessary for 'rad_hnt2' not to crash when bringing up the calibration / score table screens
@@ -211,6 +210,16 @@ protected:
 	uint8_t read_zeropage(uint32_t addr);
 	void write_zeropage(uint32_t addr, uint8_t val);
 
+	// Some original XaviX games seemed to suggest that the extra byte of the far calls went to a different
+	// stack, but dblmouse on suprtvpc does direct stack manipulation which challenges this assumption.
+	// It could be a SuperXaviX vs XaviX differences however, so currently leaving this as a toggle for testing.
+	//
+	// pausing in rad_hnt2 (press shift when on the map) is broken without this logic as the stack becomes too
+	// big with the extra bytes
+	//
+	// we currently use the private stack for regular XaviX but not for the later CPUs, however the root cause
+	// of needing it for regular XaviX could be somewhere else
+	bool m_use_private_stack_for_extra_callf_byte = true;
 };
 
 enum {

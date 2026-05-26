@@ -9,6 +9,7 @@
 #include "machine/gen_latch.h"
 #include "machine/watchdog.h"
 #include "sound/namco.h"
+
 #include "emupal.h"
 #include "screen.h"
 #include "tilemap.h"
@@ -37,11 +38,12 @@ public:
 		, m_rocktrv2_prot_data(*this, "rocktrv2_prot")
 		, m_gfxdecode(*this, "gfxdecode")
 		, m_palette(*this, "palette")
+		, m_screen(*this, "screen")
+		, m_dsw(*this, "DSW%u", 1)
 	{ }
 
 protected:
 	void _8bpm_portmap(address_map &map) ATTR_COLD;
-	void alibaba_map(address_map &map) ATTR_COLD;
 	void bigbucks_map(address_map &map) ATTR_COLD;
 	void bigbucks_portmap(address_map &map) ATTR_COLD;
 	void birdiy_map(address_map &map) ATTR_COLD;
@@ -52,8 +54,6 @@ protected:
 	void dremshpr_portmap(address_map &map) ATTR_COLD;
 	void drivfrcp_portmap(address_map &map) ATTR_COLD;
 	void mspacii_portmap(address_map &map) ATTR_COLD;
-	void mschamp_map(address_map &map) ATTR_COLD;
-	void mschamp_portmap(address_map &map) ATTR_COLD;
 	void mspacman_map(address_map &map) ATTR_COLD;
 	void nmouse_portmap(address_map &map) ATTR_COLD;
 	void numcrash_map(address_map &map) ATTR_COLD;
@@ -71,7 +71,7 @@ protected:
 
 	required_device<cpu_device> m_maincpu;
 	optional_device<ls259_device> m_mainlatch;
-	optional_device<namco_device> m_namco_sound;
+	optional_device<namco_wsg_device> m_namco_sound;
 	required_device<watchdog_timer_device> m_watchdog;
 	optional_shared_ptr<uint8_t> m_spriteram;
 	optional_shared_ptr<uint8_t> m_spriteram2;
@@ -82,9 +82,10 @@ protected:
 	optional_shared_ptr<uint8_t> m_rocktrv2_prot_data;
 	required_device<gfxdecode_device> m_gfxdecode;
 	required_device<palette_device> m_palette;
+	required_device<screen_device> m_screen;
+	optional_ioport_array<2> m_dsw;
 
 	uint8_t m_cannonb_bit_to_read = 0;
-	int m_mystery = 0;
 	uint8_t m_counter = 0;
 	int m_bigbucks_bank = 0;
 	uint8_t m_rocktrv2_question_bank = 0;
@@ -111,14 +112,10 @@ protected:
 	IRQ_CALLBACK_MEMBER(interrupt_vector_r);
 	void coin_counter_w(int state);
 	void coin_lockout_global_w(int state);
-	void alibaba_sound_w(offs_t offset, uint8_t data);
-	uint8_t alibaba_mystery_1_r();
-	uint8_t alibaba_mystery_2_r();
 	void maketrax_protection_w(uint8_t data);
 	uint8_t mbrush_prot_r(offs_t offset);
 	uint8_t maketrax_special_port2_r(offs_t offset);
 	uint8_t maketrax_special_port3_r(offs_t offset);
-	uint8_t mschamp_kludge_r();
 	void bigbucks_bank_w(uint8_t data);
 	uint8_t bigbucks_question_r(offs_t offset);
 	void porky_banking_w(uint8_t data);
@@ -174,7 +171,6 @@ public:
 	void init_8bpm();
 	void init_porky();
 	void init_mspacman();
-	void init_mschamp();
 	void init_mbrush();
 	void init_pengomc1();
 
@@ -189,11 +185,11 @@ protected:
 	void pacman_rbg_palette(palette_device &palette) const;
 	DECLARE_VIDEO_START(birdiy);
 	DECLARE_VIDEO_START(s2650games);
-	DECLARE_MACHINE_RESET(mschamp);
 	DECLARE_MACHINE_RESET(superabc);
 	DECLARE_MACHINE_RESET(maketrax);
 	DECLARE_VIDEO_START(pengo);
 	DECLARE_VIDEO_START(jrpacman);
+	void draw_sprites(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	uint32_t screen_update_pacman(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	uint32_t screen_update_s2650games(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	void vblank_irq(int state);
@@ -214,7 +210,6 @@ public:
 	void mspacman(machine_config &config);
 	void dremshpr(machine_config &config);
 	void mspacii(machine_config &config);
-	void mschamp(machine_config &config);
 	void nmouse(machine_config &config);
 	void vanvan(machine_config &config);
 	void s2650games(machine_config &config);
@@ -226,11 +221,10 @@ public:
 	void crush4(machine_config &config);
 	void bigbucks(machine_config &config);
 	void porky(machine_config &config);
-	void pacman(machine_config &config, bool latch = true);
+	void pacman(machine_config &config);
 	void _8bpm(machine_config &config);
 	void crush2(machine_config &config);
 	void korosuke(machine_config &config);
-	void alibaba(machine_config &config);
 	void drivfrcp(machine_config &config);
 	void pengojpm(machine_config &config);
 	void piranha(machine_config &config);
@@ -246,10 +240,43 @@ private:
 };
 
 
+class alibaba_state : public pacman_state
+{
+public:
+	alibaba_state(const machine_config &mconfig, device_type type, const char *tag)
+		: pacman_state(mconfig, type, tag)
+	{ }
+
+	void alibaba(machine_config &config);
+
+	void init_alibaba();
+
+protected:
+	virtual void machine_start() override ATTR_COLD;
+
+private:
+	uint8_t m_mystery_control = 0;
+	uint8_t m_mystery_clock = 0;
+	uint8_t m_mystery_prescaler = 0;
+
+	void mystery_tick(int state);
+	uint8_t mystery_1_r();
+	uint8_t mystery_2_r();
+	void mystery_w(uint8_t data);
+	void sound_w(offs_t offset, uint8_t data);
+
+	void alibaba_map(address_map &map) ATTR_COLD;
+
+	void draw_clock(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
+	uint32_t screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
+};
+
 class epospm_state : public pacman_state
 {
 public:
-	using pacman_state::pacman_state;
+	epospm_state(const machine_config &mconfig, device_type type, const char *tag)
+		: pacman_state(mconfig, type, tag)
+	{ }
 
 	void acitya(machine_config &config);
 	void theglobp(machine_config &config);
@@ -297,7 +324,6 @@ class mspactwin_state : public clubpacm_state
 public:
 	mspactwin_state(const machine_config &mconfig, device_type type, const char *tag)
 		: clubpacm_state(mconfig, type, tag)
-		, m_screen(*this, "screen")
 		, m_decrypted_opcodes(*this, "decrypted_opcodes")
 		, m_decrypted_opcodes_high(*this, "decrypted_opcodes_high")
 	{ }
@@ -307,9 +333,6 @@ public:
 	void init_mspactwin();
 
 	void flipscreen_w(int state);
-
-private:
-	required_device<screen_device> m_screen;
 
 protected:
 	void mspactwin_map(address_map &map) ATTR_COLD;
@@ -321,5 +344,28 @@ protected:
 	required_shared_ptr<uint8_t> m_decrypted_opcodes_high;
 };
 
+class mschamp_state : public pacman_state
+{
+public:
+	mschamp_state(const machine_config &mconfig, device_type type, const char *tag)
+		: pacman_state(mconfig, type, tag)
+	{ }
+
+	void mschamp(machine_config &config);
+
+protected:
+	virtual void machine_start() override ATTR_COLD;
+	virtual void machine_reset() override ATTR_COLD;
+
+	void mschamp_map(address_map &map) ATTR_COLD;
+	void mschamp_portmap(address_map &map) ATTR_COLD;
+
+private:
+	uint8_t mux_r();
+	void mux_w(offs_t offset, uint8_t data);
+
+	uint8_t m_mux = 1;
+	uint8_t m_mux_data = 0xff;
+};
 
 #endif // MAME_PACMAN_PACMAN_H

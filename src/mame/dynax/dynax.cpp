@@ -38,6 +38,7 @@ Year + Game                Main Board   Sub Board    CPU   Sound                
 91 Mj Angels               D5512068L1-1 D6107068L-1  Z80   AY8912        YM2413 M5205       RAM
 91 Mj Comic Gekijou V.1    D5512068L1-1 D6107068L-1  Z80   AY8912        YM2413 M5205 M6242 RAM   NL-001, Battery
 91 Mj Tenkaigen                                      TLCS  AY8910        YM2413       M6242 RAM   Protection, Battery
+91 Mj Tokkyu Kaitenban P2  D5902258L-0               TLCS  AY8910        YM2413                   Various scratched off devices
 91 Mj Ougon no Pai         D6209038L1-0              TLCS  AY8910        YM2413             RAM   Undumped TMP91P640 Code, Battery
 92 Quiz TV Gassyuukoku     D5512068L1-2 D6410288L-1  Z80   AY8912        YM2413 M5205       RAM
 92 Hanafuda Hana Tengoku   D6502208L1   D6107068L-1  Z80   AY8910        YM2413       M6242 RAM
@@ -82,6 +83,7 @@ TODO:
 #include "emu.h"
 #include "dynax.h"
 
+#include "hanafuda.h"
 #include "mjdipsw.h"
 
 #include "mahjong.h"
@@ -253,7 +255,7 @@ void jantouki_state::jantouki_sound_rombank_w(uint8_t data)
 }
 
 
-void dynax_adpcm_state::hnoridur_rombank_w(uint8_t data)
+void dynax_state::hnoridur_rombank_w(uint8_t data)
 {
 	m_bankdev->set_bank(data & 0x1f);
 }
@@ -281,19 +283,19 @@ void dynax_adpcm_state::hnoridur_palette_update(offs_t offset)
 	m_palette->set_pen_color(256 * m_palbank + offset, pal5bit(r), pal5bit(g), pal5bit(b));
 }
 
-void dynax_adpcm_state::nanajign_palette_lo_w(offs_t offset, uint8_t data)
+void dynax_state::nanajign_palette_lo_w(offs_t offset, uint8_t data)
 {
 	m_palette_ram[256 * m_palbank + offset + 16 * 256] = data;
 	nanajign_palette_update(offset);
 }
 
-void dynax_adpcm_state::nanajign_palette_hi_w(offs_t offset, uint8_t data)
+void dynax_state::nanajign_palette_hi_w(offs_t offset, uint8_t data)
 {
 	m_palette_ram[256 * m_palbank + offset] = data;
 	nanajign_palette_update(offset);
 }
 
-void dynax_adpcm_state::nanajign_palette_update(offs_t offset)
+void dynax_state::nanajign_palette_update(offs_t offset)
 {
 	int bg = m_palette_ram[256 * m_palbank + offset];
 	int br = m_palette_ram[256 * m_palbank + offset + 16 * 256];
@@ -368,15 +370,7 @@ void dynax_adpcm_state::hnoridur_mem_map(address_map &map)
 	map(0x8000, 0xffff).m(m_bankdev, FUNC(address_map_bank_device::amap8));
 }
 
-void dynax_adpcm_state::mcnpshnt_mem_map(address_map &map)
-{
-	map(0x0000, 0x5fff).rom();
-	map(0x6000, 0x6fff).ram();
-	map(0x7000, 0x7fff).ram().share("nvram");
-	map(0x8000, 0xffff).m(m_bankdev, FUNC(address_map_bank_device::amap8));
-}
-
-void dynax_adpcm_state::nanajign_mem_map(address_map &map)
+void dynax_state::nanajign_mem_map(address_map &map)
 {
 	map(0x0000, 0x5fff).rom();
 	map(0x6000, 0x6fff).ram();
@@ -390,14 +384,6 @@ void dynax_state::mjdialq2_mem_map(address_map &map)
 	map(0x0800, 0x0fff).ram();
 	map(0x1000, 0x1fff).ram().share("nvram");
 	map(0x8000, 0xffff).bankr("bank1");
-}
-
-void dynax_adpcm_state::yarunara_mem_map(address_map &map)
-{
-	map(0x0000, 0x5fff).rom();
-	map(0x6000, 0x6fff).ram();
-	map(0x7000, 0x7fff).ram().share("nvram");
-	map(0x8000, 0xffff).m(m_bankdev, FUNC(address_map_bank_device::amap8));
 }
 
 //identical to yarunara, but nvram is in the 0x6000 - 0x6fff range
@@ -434,11 +420,11 @@ void dynax_adpcm_state::hnoridur_banked_map(address_map &map)
 	map(0xc0000, 0xc7fff).ram(); // hnoridur: R/W RAM
 }
 
-void dynax_adpcm_state::mjelctrn_banked_map(address_map &map)
+void dynax_state::mjelctrn_banked_map(address_map &map)
 {
 	map(0x00000, 0x3ffff).rom().region("maincpu", 0x10000);
-	map(0x80000, 0x800ff).w(FUNC(dynax_adpcm_state::nanajign_palette_lo_w));
-	map(0xa0000, 0xa00ff).w(FUNC(dynax_adpcm_state::nanajign_palette_hi_w));
+	map(0x80000, 0x800ff).w(FUNC(dynax_state::nanajign_palette_lo_w));
+	map(0xa0000, 0xa00ff).w(FUNC(dynax_state::nanajign_palette_hi_w));
 }
 
 void dynax_adpcm_state::nanajign_banked_map(address_map &map)
@@ -543,14 +529,14 @@ void dynax_adpcm_state::hjingi_lockout_w(int state)
 	machine().bookkeeping().coin_lockout_w(0, !state);
 }
 
-uint8_t dynax_adpcm_state::hjingi_keyboard_0_r()
+uint8_t dynax_state::hjingi_keyboard_0_r()
 {
 	return hanamai_keyboard_r<0>() | (m_hopper->line_r() ? 0 : (1 << 6));
 }
 
 uint8_t dynax_adpcm_state::hjingi_keyboard_1_r()
 {
-	return hanamai_keyboard_r<1>() | ioport("BET")->read();
+	return hanamai_keyboard_r<1>() | m_bet->read();
 }
 
 void dynax_adpcm_state::hjingi_mem_map(address_map &map)
@@ -645,7 +631,7 @@ uint8_t dynax_adpcm_state::yarunara_input_r(offs_t offset)
 		switch (m_input_sel)
 		{
 		case 0x00:
-			result = ioport("COINS")->read(); // coins
+			result = m_coins->read(); // coins
 			break;
 
 		case 0x02:
@@ -687,8 +673,9 @@ void dynax_adpcm_state::yarunara_rombank_w(uint8_t data)
 	m_bankdev->set_bank(data & 0x3f);
 }
 
-void dynax_adpcm_state::yarunara_blit_romregion_w(uint8_t data)
+void dynax_state::yarunara_blit_romregion_w(uint8_t data)
 {
+	logerror("%s: unmapped romregion=%02X\n", machine().describe_context(), data);
 	switch(data)
 	{
 		case 0x00:  dynax_blit_romregion_w(0);    return;
@@ -697,7 +684,6 @@ void dynax_adpcm_state::yarunara_blit_romregion_w(uint8_t data)
 		case 0x81:  dynax_blit_romregion_w(3);    return;
 		case 0x82:  dynax_blit_romregion_w(4);    return; // mjcomv1
 	}
-	logerror("%s: unmapped romregion=%02X\n", machine().describe_context(), data);
 }
 
 void dynax_adpcm_state::yarunara_io_map(address_map &map)
@@ -926,17 +912,16 @@ void jantouki_state::jantouki_sound_io_map(address_map &map)
                             Mahjong Electron Base
 ***************************************************************************/
 
-uint8_t dynax_adpcm_state::mjelctrn_keyboard_1_r()
+uint8_t dynax_state::mjelctrn_keyboard_1_r()
 {
-	return (hanamai_keyboard_r<1>() & 0x3f) | (ioport("FAKE")->read() ? 0x40 : 0);
+	return (hanamai_keyboard_r<1>() & 0x3f) | (m_io_fake->read() ? 0x40 : 0);
 }
 
-uint8_t dynax_adpcm_state::mjelctrn_dsw_r()
+uint8_t dynax_state::mjelctrn_dsw_r()
 {
-	int dsw = (m_keyb & 0xc0) >> 6;
-	static const char *const dswnames[] = { "DSW0", "DSW1", "DSW2", "DSW3" };
+	int const dsw = (m_keyb & 0xc0) >> 6;
 
-	return ioport(dswnames[dsw])->read();
+	return m_dsw[dsw]->read();
 }
 
 void dynax_adpcm_state::mjelctrn_io_map(address_map &map)
@@ -971,6 +956,46 @@ void dynax_adpcm_state::mjelctrn_io_map(address_map &map)
 	map(0xe5, 0xe5).w(FUNC(dynax_adpcm_state::dynax_blit_backpen_w));       // Background Color
 	map(0xe6, 0xe6).w(FUNC(dynax_adpcm_state::yarunara_blit_romregion_w));  // Blitter ROM bank
 	map(0xe7, 0xe7).w(FUNC(dynax_adpcm_state::hnoridur_palbank_w));
+}
+
+void dynax_state::qyjdzjp_io_map(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x04, 0x05).w("ym2413", FUNC(ym2413_device::write));                //
+	map(0x08, 0x08).w("aysnd", FUNC(ay8912_device::data_w));                // AY8912
+	map(0x0a, 0x0a).w("aysnd", FUNC(ay8912_device::address_w));             //
+	map(0x0c, 0x0c).w("oki", FUNC(okim6295_device::write));                 //
+//  map(0x20, 0x20).nopw();                                                 // CRT Controller
+//  map(0x21, 0x21).nopw();                                                 // CRT Controller
+	map(0x40, 0x47).w("outlatch", FUNC(ls259_device::write_d0));
+	map(0x60, 0x60).w(FUNC(dynax_state::dynax_extra_scrollx_w));      // screen scroll X
+	map(0x62, 0x62).w(FUNC(dynax_state::dynax_extra_scrolly_w));      // screen scroll Y
+//  map(0x64, 0x64).w(FUNC(dynax_state::dynax_extra_scrollx_w));      // screen scroll X
+//  map(0x66, 0x66).w(FUNC(dynax_state::dynax_extra_scrolly_w));      // screen scroll Y
+	map(0x6a, 0x6a).w(FUNC(dynax_state::hnoridur_rombank_w));         // BANK ROM Select
+	map(0x80, 0x80).w(FUNC(dynax_state::hanamai_keyboard_w));         // keyboard row select
+	map(0x81, 0x81).portr("COINS");                                         // Coins
+	map(0x82, 0x82).r(FUNC(dynax_state::mjelctrn_keyboard_1_r));      // P2
+	map(0x83, 0x83).r(FUNC(dynax_state::hjingi_keyboard_0_r));        // P1
+	map(0x84, 0x84).r(FUNC(dynax_state::mjelctrn_dsw_r));             // DSW8 x 4
+	map(0x85, 0x85).portr("SW1");                                           // DSW2
+	map(0xa1, 0xa7).w(m_blitter, FUNC(dynax_blitter_rev2_device::regs_w));  // Blitter
+	map(0xc0, 0xc7).w(m_mainlatch, FUNC(ls259_device::write_d0));
+	map(0xe0, 0xe0).w(m_blitter, FUNC(dynax_blitter_rev2_device::pen_w));   // Destination Pen
+	map(0xe1, 0xe1).w(FUNC(dynax_state::dynax_blit_dest_w));          // Destination Layer
+	map(0xe2, 0xe2).w(FUNC(dynax_state::dynax_blit_palette01_w));     // Layers Palettes
+	map(0xe3, 0xe3).w(FUNC(dynax_state::dynax_blit_palette23_w));     //
+	map(0xe4, 0xe4).w(FUNC(dynax_state::hanamai_priority_w));         // layer priority and enable
+	map(0xe5, 0xe5).w(FUNC(dynax_state::dynax_blit_backpen_w));       // Background Color
+	map(0xe6, 0xe6).w(FUNC(dynax_state::yarunara_blit_romregion_w));  // Blitter ROM bank
+	map(0xe7, 0xe7).w(FUNC(dynax_state::hnoridur_palbank_w));
+}
+
+void dynax_state::baoqingt_io_map(address_map &map)
+{
+	qyjdzjp_io_map(map);
+
+	map(0x82, 0x82).lr8(NAME([] () -> uint8_t { return 0x80; })); // blitter busy line?
 }
 
 void dynax_adpcm_state::mjembase_io_map(address_map &map)
@@ -1049,7 +1074,7 @@ uint8_t dynax_state::tenkai_ip_r(offs_t offset)
 		{
 		case 0x00:
 		case 0x80:
-			result = ioport("COINS")->read(); // coins
+			result = m_coins->read(); // coins
 			break;
 
 		case 0x02:
@@ -1106,11 +1131,11 @@ void dynax_state::tenkai_dswsel_w(uint8_t data)
 uint8_t dynax_state::tenkai_dsw_r()
 {
 	uint8_t result = 0xff;
-	if (!BIT(m_dsw_sel, 0)) result &= ioport("DSW0")->read();
-	if (!BIT(m_dsw_sel, 1)) result &= ioport("DSW1")->read();
-	if (!BIT(m_dsw_sel, 2)) result &= ioport("DSW2")->read();
-	if (!BIT(m_dsw_sel, 3)) result &= ioport("DSW3")->read();
-	if (!BIT(m_dsw_sel, 4)) result &= ioport("DSW4")->read();
+	if (!BIT(m_dsw_sel, 0)) result &= m_dsw[0]->read();
+	if (!BIT(m_dsw_sel, 1)) result &= m_dsw[1]->read();
+	if (!BIT(m_dsw_sel, 2)) result &= m_dsw[2]->read();
+	if (!BIT(m_dsw_sel, 3)) result &= m_dsw[3]->read();
+	if (!BIT(m_dsw_sel, 4)) result &= m_dsw[4]->read();
 
 	return result;
 }
@@ -1285,6 +1310,47 @@ void dynax_state::ougonhai_banked_map(address_map &map)
 	map(0x90000, 0x97fff).rw(FUNC(dynax_state::tenkai_palette_r), FUNC(dynax_state::tenkai_palette_w));
 }
 
+
+uint8_t dynax_state::mjtkp2_dsw_r()
+{
+	if (m_dsw_sel < 5)
+		return m_dsw[m_dsw_sel]->read();
+	else
+		return 0xff;
+}
+
+void dynax_state::mjtkp2_map(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x00000, 0x05fff).rom();
+	map(0x06000, 0x07fff).ram().share("nvram");
+	map(0x08000, 0x0ffff).m(m_bankdev, FUNC(address_map_bank_device::amap8));
+	map(0x14000, 0x14000).w(FUNC(dynax_state::tenkai_ipsel_w));
+	map(0x14001, 0x14001).w(FUNC(dynax_state::tenkai_ip_w));
+	map(0x14002, 0x14003).r(FUNC(dynax_state::tenkai_ip_r));
+	map(0x14081, 0x14087).w(m_blitter, FUNC(dynax_blitter_rev2_device::regs_w));    // Blitter (inverted scroll values)
+	map(0x14100, 0x14100).w(FUNC(dynax_state::tenkai_dswsel_w));
+	map(0x14180, 0x14180).r(FUNC(dynax_state::mjtkp2_dsw_r));
+	map(0x14200, 0x14200).w(m_blitter, FUNC(dynax_blitter_rev2_device::pen_w)); // maybe
+	map(0x14210, 0x14210).w(FUNC(dynax_state::dynax_blit_dest_w)); // maybe
+	map(0x14220, 0x14220).w(FUNC(dynax_state::dynax_blit_palette23_w)); // maybe
+	map(0x14230, 0x14230).w(FUNC(dynax_state::dynax_blit_palette01_w)); // maybe
+	map(0x14240, 0x14240).w(FUNC(dynax_state::hanamai_priority_w));        // layer priority and enable
+	map(0x14250, 0x14250).w(FUNC(dynax_state::dynax_blit_backpen_w)); // maybe
+	map(0x14260, 0x14260).lw8(NAME([this] (uint8_t data) { if (data) logerror("%s unk $14260 write: %02x\n", machine().describe_context(), data); }));  // writes 0x80 sometimes
+	map(0x14280, 0x142ff).lw8(NAME([this] (offs_t offset, u8 data) { m_mainlatch->write_d1(offset >> 4, data); }));
+	map(0x14310, 0x14310).w("aysnd", FUNC(ay8910_device::data_w));
+	map(0x14320, 0x14320).w("aysnd", FUNC(ay8910_device::address_w));
+	map(0x14380, 0x14381).w("ym2413", FUNC(ym2413_device::write));
+}
+
+void dynax_state::mjtkp2_banked_map(address_map &map)
+{
+	map(0x00000, 0x3ffff).rom().region("maincpu", 0x10000);
+	map(0x40000, 0x400ff).w(FUNC(dynax_state::nanajign_palette_lo_w));
+	map(0x60000, 0x600ff).w(FUNC(dynax_state::nanajign_palette_hi_w));
+}
+
 /***************************************************************************
                                 Mahjong Gekisha
 ***************************************************************************/
@@ -1294,7 +1360,7 @@ uint8_t dynax_state::gekisha_keyboard_1_r()
 	uint8_t res = hanamai_keyboard_r<1>();
 
 	// bit 6
-	res |= ioport("BET")->read();
+	res |= m_bet->read();
 
 	// bit 7 = blitter busy
 
@@ -1412,164 +1478,9 @@ INPUT_PORTS_START( dynax_mahjong_keys )
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_LAST_CHANCE ) PORT_PLAYER(2)
 INPUT_PORTS_END
 
-static INPUT_PORTS_START( dynax_hanafuda_keys )
-	PORT_START("KEY0")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_A ) PORT_PLAYER(1)
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_HANAFUDA_E ) PORT_PLAYER(1)
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_HANAFUDA_YES ) PORT_PLAYER(1)
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_START1 )
-
-	PORT_START("KEY1")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_B ) PORT_PLAYER(1)
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_HANAFUDA_F ) PORT_PLAYER(1)
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_HANAFUDA_NO ) PORT_PLAYER(1)
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
-
-	PORT_START("KEY2")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_C ) PORT_PLAYER(1)
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_HANAFUDA_G ) PORT_PLAYER(1)
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
-
-	PORT_START("KEY3")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_D ) PORT_PLAYER(1)
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_HANAFUDA_H ) PORT_PLAYER(1)
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
-
-	PORT_START("KEY4")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_LAST_CHANCE ) PORT_PLAYER(1) // "l"
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_FLIP_FLOP ) PORT_PLAYER(1)   // "f"
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
-
-	PORT_START("KEY5")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_A ) PORT_PLAYER(2)
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_HANAFUDA_E ) PORT_PLAYER(2)
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_HANAFUDA_YES ) PORT_PLAYER(2)
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_START2 )
-
-	PORT_START("KEY6")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_B ) PORT_PLAYER(2)
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_HANAFUDA_F ) PORT_PLAYER(2)
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_HANAFUDA_NO ) PORT_PLAYER(2)
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
-
-	PORT_START("KEY7")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_C ) PORT_PLAYER(2)
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_HANAFUDA_G ) PORT_PLAYER(2)
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
-
-	PORT_START("KEY8")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_D ) PORT_PLAYER(2)
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_HANAFUDA_H ) PORT_PLAYER(2)
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
-
-	PORT_START("KEY9")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_LAST_CHANCE ) PORT_PLAYER(2) // "l"
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_FLIP_FLOP ) PORT_PLAYER(2)   // "f"
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
-INPUT_PORTS_END
-
-// Medal hanafuda games use 6 card hands
-INPUT_PORTS_START( dynax_hanafuda_keys_bet )
-	PORT_INCLUDE( dynax_hanafuda_keys )
-
-	PORT_MODIFY("KEY1")
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_BET ) PORT_PLAYER(1)
-
-	PORT_MODIFY("KEY2")
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )
-
-	PORT_MODIFY("KEY3")
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )
-
-	PORT_MODIFY("KEY4")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_SCORE )          // "t"
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_DOUBLE_UP )      // "w"
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_BIG )            // "b"
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_SMALL )          // "s"
-
-	PORT_MODIFY("KEY6")
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_BET ) PORT_PLAYER(2)
-
-	PORT_MODIFY("KEY7")
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )
-
-	PORT_MODIFY("KEY8")
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )
-
-	PORT_MODIFY("KEY9")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_SCORE ) PORT_PLAYER(2)       // "t"
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_DOUBLE_UP ) PORT_PLAYER(2)   // "w"
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_BIG ) PORT_PLAYER(2)         // "b"
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_SMALL ) PORT_PLAYER(2)       // "s"
-INPUT_PORTS_END
-
-#if 0
-[[maybe_unused]] static INPUT_PORTS_START( HANAFUDA_KEYS_BET_ALT )
-	PORT_INCLUDE( dynax_hanafuda_keys )
-
-	PORT_MODIFY("KEY0")
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_SCORE )          // "t"
-
-	PORT_MODIFY("KEY1")
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_SMALL )          // "s"
-
-	PORT_MODIFY("KEY2")
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_BIG )            // "b"
-
-	PORT_MODIFY("KEY3")
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_DOUBLE_UP )      // "w"
-
-	PORT_MODIFY("KEY4")
-	PORT_BIT( 0x3f, IP_ACTIVE_LOW, IPT_UNKNOWN )
-
-	PORT_MODIFY("KEY5")
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_SCORE ) PORT_PLAYER(2)       // "t"
-
-	PORT_MODIFY("KEY6")
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_SMALL ) PORT_PLAYER(2)       // "s"
-
-	PORT_MODIFY("KEY7")
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_BIG ) PORT_PLAYER(2)         // "b"
-
-	PORT_MODIFY("KEY8")
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_DOUBLE_UP ) PORT_PLAYER(2)   // "w"
-
-	PORT_MODIFY("KEY9")
-	PORT_BIT( 0x3f, IP_ACTIVE_LOW, IPT_UNKNOWN )
-INPUT_PORTS_END
-#endif
-
 #define MAHJONG_COIN_TEST(ct, cm) \
 		PORT_START("COINS") \
-		PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) PORT_CONDITION(ct, cm, EQUALS, 0)   /* Pay          */ \
+		PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT )                      PORT_CONDITION(ct, cm, EQUALS, 0)   /* Pay          */ \
 		PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_KEYOUT )                      PORT_CONDITION(ct, cm, EQUALS, cm)                     \
 		PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )                                                                /* 18B          */ \
 		PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_SERVICE ) PORT_TOGGLE                                                    /* Test         */ \
@@ -1776,12 +1687,12 @@ static INPUT_PORTS_START( hnkochou )
 	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
 
 	PORT_START("COINS")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) // Pay
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) // Pay
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_SERVICE_NO_TOGGLE(0x04, IP_ACTIVE_LOW )    // Test (there isn't a dip switch)
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )  // Analyzer
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MEMORY_RESET ) // Memory Reset
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_COIN3 )      // Note
+	PORT_SERVICE_NO_TOGGLE(0x04, IP_ACTIVE_LOW )       // Test (there isn't a DIP switch)
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )   // Analyzer
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MEMORY_RESET )  // Memory Reset
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_COIN3 )         // Note
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_COIN1 ) PORT_IMPULSE(2)
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_UNKNOWN )
 
@@ -1944,7 +1855,7 @@ static INPUT_PORTS_START( hjingi )
 //  PORT_DIPSETTING(    0x00, DEF_STR( ) )
 	PORT_DIPNAME( 0x08, 0x08, "Payout Variation" )           PORT_DIPLOCATION("DIPSW 2:4")        // 配当の波
 	PORT_DIPSETTING(    0x00, "Small" )                                                           // 小さい
-	PORT_DIPSETTING(    0x08, "Big" )                                                             // 大きい
+	PORT_DIPSETTING(    0x08, "Large" )                                                           // 大きい
 	PORT_DIPNAME( 0x10, 0x10, "Double-Up Game Payout Rate" ) PORT_DIPLOCATION("DIPSW 2:5")        // ＷＵＰゲーム配当率
 	PORT_DIPSETTING(    0x00, DEF_STR(Low) )                                                      // 低い
 	PORT_DIPSETTING(    0x10, DEF_STR(High) )                                                     // 高い
@@ -1963,7 +1874,7 @@ static INPUT_PORTS_START( hjingi )
 	PORT_DIPSETTING(    0x03, DEF_STR(1C_1C) )                                                    // １コイン　１プレイ
 	PORT_DIPSETTING(    0x02, DEF_STR(1C_2C) )                                                    // １コイン　２プレイ
 	PORT_DIPSETTING(    0x01, DEF_STR(1C_5C) )                                                    // １コイン　５プレイ
-	PORT_DIPSETTING(    0x00, "1 Coin/10 Credits" )                                               // １コイン１０プレイ
+	PORT_DIPSETTING(    0x00, DEF_STR(1C_10C) )                                                   // １コイン１０プレイ
 	PORT_DIPNAME( 0x04, 0x04, "Key-In Rate" )                PORT_DIPLOCATION("DIPSW 3:3")        // キーインレーと
 	PORT_DIPSETTING(    0x00, "5" )      PORT_CONDITION("DSW2", 0x03, EQUALS, 0x03)               // ×　５
 	PORT_DIPSETTING(    0x00, "10" )     PORT_CONDITION("DSW2", 0x03, EQUALS, 0x02)
@@ -2002,7 +1913,7 @@ static INPUT_PORTS_START( hjingi )
 	PORT_DIPUNKNOWN_DIPLOC( 0x80, 0x80, "DIPSW 4:8")                                              // ＯＦＦ固定
 
 	PORT_START("COINS")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) // Pay
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) // Pay
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_SERVICE4 )   // 18B
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_SERVICE ) PORT_NAME(DEF_STR(Test))
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )  // Analyzer
@@ -3035,7 +2946,7 @@ static INPUT_PORTS_START( mjelct3 )
 	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
 
 	PORT_START("DSW2")  /* 7c22 (select = 80) */
-	MAHJONG_YAKUMAN_BONUS(0, "SW2:1,2,3")
+	MAHJONG_YAKUMAN_BONUS(0, 0x04, "SW2:1,2,3")
 	PORT_DIPNAME( 0x08, 0x08, "Yakuman Bonuses Per Cycle" )    PORT_DIPLOCATION("SW2:4")
 	PORT_DIPSETTING(    0x08, "1" )
 	PORT_DIPSETTING(    0x00, "2" )
@@ -3087,7 +2998,7 @@ INPUT_PORTS_END
 
 static INPUT_PORTS_START( mjelctrn )
 	PORT_START("COINS")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) // Pay
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT )                      // Pay
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )                            // 18B
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_SERVICE ) PORT_TOGGLE                // Test
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )                        // Analyzer
@@ -3103,104 +3014,72 @@ static INPUT_PORTS_START( mjelctrn )
 	PORT_DIPUNKNOWN_DIPLOC(0x02, 0x02, "SW1:2")
 
 	PORT_START("DSW0")  /* 7c21 (select = 00) */
-	PORT_DIPNAME( 0x03, 0x03, "Difficulty?" )                  PORT_DIPLOCATION("SW3:1,2")
-	PORT_DIPSETTING(    0x03, "0" ) // 20
-	PORT_DIPSETTING(    0x00, "1" ) // 32
-	PORT_DIPSETTING(    0x01, "2" ) // 64
-	PORT_DIPSETTING(    0x02, "3" ) // c8
-	PORT_DIPNAME( 0x0c, 0x0c, DEF_STR(Coinage) )               PORT_DIPLOCATION("SW3:3,4")
-	PORT_DIPSETTING(    0x0c, DEF_STR( 1C_1C ) )
-	PORT_DIPSETTING(    0x08, DEF_STR( 1C_2C ) )
-	PORT_DIPSETTING(    0x04, DEF_STR( 1C_5C ) )
-	PORT_DIPSETTING(    0x00, "1 Coin/10 Credits" )
+	MAHJONG_ODDS_RATE(0, "SW3:1,2");
+	MAHJONG_COINAGE(2, "SW3:3,4")
 	PORT_DIPNAME( 0x30, 0x30, "Minimum Bet" )                  PORT_DIPLOCATION("SW3:5,6")
 	PORT_DIPSETTING(    0x30, "1" )
 	PORT_DIPSETTING(    0x20, "2" )
 	PORT_DIPSETTING(    0x10, "3" )
 	PORT_DIPSETTING(    0x00, "5" )
-	PORT_DIPNAME( 0x40, 0x40, "Allow Coin Out" )               PORT_DIPLOCATION("SW3:7")
-	PORT_DIPSETTING(    0x00, DEF_STR( Off ) )
-	PORT_DIPSETTING(    0x40, DEF_STR( On ) )
+	PORT_DIPNAME( 0x40, 0x40, "Payout Mode" )                  PORT_DIPLOCATION("SW3:7")
+	PORT_DIPSETTING(    0x40, "Key-out" )
+	PORT_DIPSETTING(    0x00, "Hopper" )
 	PORT_DIPNAME( 0x80, 0x80, "Win A Prize?" )                 PORT_DIPLOCATION("SW3:8")
 	PORT_DIPSETTING(    0x80, DEF_STR( Off ) )
 	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
 
 	PORT_START("DSW1")  /* 7c20 (select = 40) */
-	PORT_DIPNAME( 0x0f, 0x07, "Payout Rate" )                  PORT_DIPLOCATION("SW4:1,2,3,4")
-	PORT_DIPSETTING(    0x00, "50%" )
-	PORT_DIPSETTING(    0x01, "53%" )
-	PORT_DIPSETTING(    0x02, "56%" )
-	PORT_DIPSETTING(    0x03, "59%" )
-	PORT_DIPSETTING(    0x04, "62%" )
-	PORT_DIPSETTING(    0x05, "65%" )
-	PORT_DIPSETTING(    0x06, "68%" )
-	PORT_DIPSETTING(    0x07, "71%" )
-	PORT_DIPSETTING(    0x08, "75%" )
-	PORT_DIPSETTING(    0x09, "78%" )
-	PORT_DIPSETTING(    0x0a, "81%" )
-	PORT_DIPSETTING(    0x0b, "84%" )
-	PORT_DIPSETTING(    0x0c, "87%" )
-	PORT_DIPSETTING(    0x0d, "90%" )
-	PORT_DIPSETTING(    0x0e, "93%" )
-	PORT_DIPSETTING(    0x0f, "96%" )
+	MAHJONG_PAYOUT_RATE(0, "SW4:1,2,3,4")
 	PORT_DIPNAME( 0x30, 0x10, "Maximum Bet" )                  PORT_DIPLOCATION("SW4:5,6")
 	PORT_DIPSETTING(    0x30, "1" )
 	PORT_DIPSETTING(    0x20, "5" )
 	PORT_DIPSETTING(    0x10, "10" )
 	PORT_DIPSETTING(    0x00, "20" )
-	PORT_DIPNAME( 0x40, 0x00, "Credits Per Note" )             PORT_DIPLOCATION("SW4:7")
-	PORT_DIPSETTING(    0x40, "5" )                            PORT_CONDITION("DSW0", 0x0c, EQUALS, 0x0c)
-	PORT_DIPSETTING(    0x40, "10" )                           PORT_CONDITION("DSW0", 0x0c, EQUALS, 0x08)
-	PORT_DIPSETTING(    0x40, "25" )                           PORT_CONDITION("DSW0", 0x0c, EQUALS, 0x04)
-	PORT_DIPSETTING(    0x40, "50" )                           PORT_CONDITION("DSW0", 0x0c, EQUALS, 0x00)
-	PORT_DIPSETTING(    0x00, "10" )                           PORT_CONDITION("DSW0", 0x0c, EQUALS, 0x0c)
-	PORT_DIPSETTING(    0x00, "20" )                           PORT_CONDITION("DSW0", 0x0c, EQUALS, 0x08)
-	PORT_DIPSETTING(    0x00, "50" )                           PORT_CONDITION("DSW0", 0x0c, EQUALS, 0x04)
-	PORT_DIPSETTING(    0x00, "100" )                          PORT_CONDITION("DSW0", 0x0c, EQUALS, 0x00)
-	PORT_DIPNAME( 0x80, 0x80, DEF_STR( Flip_Screen ) )         PORT_DIPLOCATION("SW4:8")
-	PORT_DIPSETTING(    0x80, DEF_STR( Off ) )
-	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
+	MAHJONG_NOTE_CREDITS(6, "SW4:7", "DSW0", 2)
+	PORT_DIPNAME( 0x80, 0x80, DEF_STR(Flip_Screen) )           PORT_DIPLOCATION("SW4:8")
+	PORT_DIPSETTING(    0x80, DEF_STR(Off) )
+	PORT_DIPSETTING(    0x00, DEF_STR(On) )
 
 	PORT_START("DSW2")  /* 7c22 (select = 80) */
-	MAHJONG_YAKUMAN_BONUS(0, "SW2:1,2,3")
+	MAHJONG_YAKUMAN_BONUS(0, 0x04, "SW2:1,2,3")
 	PORT_DIPNAME( 0x08, 0x08, "Yakuman Bonuses Per Cycle" )    PORT_DIPLOCATION("SW2:4")
 	PORT_DIPSETTING(    0x08, "1" )
 	PORT_DIPSETTING(    0x00, "2" )
 	PORT_DIPNAME( 0x10, 0x10, "Win Rate?" )                    PORT_DIPLOCATION("SW2:5")
 	PORT_DIPSETTING(    0x10, DEF_STR( High ) )
 	PORT_DIPSETTING(    0x00, DEF_STR( Low ) )
-	PORT_DIPNAME( 0x20, 0x20, "Draw New Tile (Part 4 Only)" )  PORT_DIPLOCATION("SW2:6")
-	PORT_DIPSETTING(    0x00, "Automatic" )
-	PORT_DIPSETTING(    0x20, "Manual" )
-	PORT_DIPNAME( 0x40, 0x40, "DonDen Key" )                   PORT_DIPLOCATION("SW2:7")
+	PORT_DIPNAME( 0x20, 0x20, "Draw Automatically (Part 4)" )  PORT_DIPLOCATION("SW2:6")
+	PORT_DIPSETTING(    0x20, DEF_STR(Off) )
+	PORT_DIPSETTING(    0x00, DEF_STR(On) )
+	PORT_DIPNAME( 0x40, 0x00, "Don Den Button" )               PORT_DIPLOCATION("SW2:7")
 	PORT_DIPSETTING(    0x40, "A" )
 	PORT_DIPSETTING(    0x00, "Flip Flop" )
-	PORT_DIPNAME( 0x80, 0x00, "Subtitle" )                     PORT_DIPLOCATION("SW2:8")
-	PORT_DIPSETTING(    0x80, "None (Part 2)" )
-	PORT_DIPSETTING(    0x00, "???? (Part 4)" )
+	PORT_DIPNAME( 0x80, 0x00, "Game Type" )                    PORT_DIPLOCATION("SW2:8")
+	PORT_DIPSETTING(    0x80, "Part 2" )
+	PORT_DIPSETTING(    0x00, "Part 4 (Choukyuu)" )
 
 	PORT_START("DSW3")  /* 7c23 (select = c0) */
 	PORT_DIPNAME( 0x01, 0x01, "Last Chance" )                  PORT_DIPLOCATION("SW5:1")
-	PORT_DIPSETTING(    0x00, DEF_STR( Off ) )
-	PORT_DIPSETTING(    0x01, DEF_STR( On ) )
+	PORT_DIPSETTING(    0x01, "Free" )
+	PORT_DIPSETTING(    0x00, "Paid" )
 	PORT_DIPNAME( 0x02, 0x02, "Pay Rate?" )                    PORT_DIPLOCATION("SW5:2")
 	PORT_DIPSETTING(    0x02, DEF_STR( High ) )
 	PORT_DIPSETTING(    0x00, DEF_STR( Low ) )
-	PORT_DIPNAME( 0x04, 0x04, "Choose Bonus" )                 PORT_DIPLOCATION("SW5:3")
-	PORT_DIPSETTING(    0x04, DEF_STR( Off ) )
-	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
-	PORT_DIPNAME( 0x08, 0x08, "In-Game Bet?" )                 PORT_DIPLOCATION("SW5:4")
-	PORT_DIPSETTING(    0x00, DEF_STR( Off ) )
-	PORT_DIPSETTING(    0x08, DEF_STR( On ) )
-	PORT_DIPNAME( 0x10, 0x00, DEF_STR( Demo_Sounds ) )         PORT_DIPLOCATION("SW5:5")
-	PORT_DIPSETTING(    0x10, DEF_STR( Off ) )
-	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
+	PORT_DIPNAME( 0x04, 0x04, "Auto Reach" )                   PORT_DIPLOCATION("SW5:3")
+	PORT_DIPSETTING(    0x04, DEF_STR(Off) )
+	PORT_DIPSETTING(    0x00, DEF_STR(On) )
+	PORT_DIPNAME( 0x08, 0x00, "Double Bet" )                   PORT_DIPLOCATION("SW5:4")
+	PORT_DIPSETTING(    0x08, DEF_STR(Off) )
+	PORT_DIPSETTING(    0x00, DEF_STR(On) )
+	PORT_DIPNAME( 0x10, 0x00, DEF_STR(Demo_Sounds) )           PORT_DIPLOCATION("SW5:5")
+	PORT_DIPSETTING(    0x10, DEF_STR(Off) )
+	PORT_DIPSETTING(    0x00, DEF_STR(On) )
 	PORT_DIPNAME( 0x20, 0x00, "In-Game Music" )                PORT_DIPLOCATION("SW5:6")
-	PORT_DIPSETTING(    0x20, DEF_STR( Off ) )
-	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
-	PORT_DIPNAME( 0x40, 0x40, "Select Girl" )                  PORT_DIPLOCATION("SW5:7")
-	PORT_DIPSETTING(    0x40, DEF_STR( Off ) )
-	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
+	PORT_DIPSETTING(    0x20, DEF_STR(Off) )
+	PORT_DIPSETTING(    0x00, DEF_STR(On) )
+	PORT_DIPNAME( 0x40, 0x40, "Gal Select" )                   PORT_DIPLOCATION("SW5:7")
+	PORT_DIPSETTING(    0x40, DEF_STR(Off) )
+	PORT_DIPSETTING(    0x00, DEF_STR(On) )
 	PORT_DIPNAME( 0x80, 0x00, "Girls" )                        PORT_DIPLOCATION("SW5:8")
 	PORT_DIPSETTING(    0x80, DEF_STR( Off ) )
 	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
@@ -3214,7 +3093,7 @@ INPUT_PORTS_END
 
 static INPUT_PORTS_START( majxtal7 )
 	PORT_START("COINS")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) PORT_CONDITION("DSW0", 0x40, EQUALS, 0x00) // Pay
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT )                      PORT_CONDITION("DSW0", 0x40, EQUALS, 0x00) // Pay
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_KEYOUT )                      PORT_CONDITION("DSW0", 0x40, EQUALS, 0x40)
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )                                                                       // 18B
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_SERVICE )                                                                       // Test
@@ -3254,7 +3133,7 @@ static INPUT_PORTS_START( majxtal7 )
 	PORT_DIPSETTING(    0x00, DEF_STR(On) )
 
 	PORT_START("DSW2") /* select = 80 */
-	MAHJONG_YAKUMAN_BONUS(0, "DIP3:1,2,3")
+	MAHJONG_YAKUMAN_BONUS(0, 0x04, "DIP3:1,2,3")
 	PORT_DIPNAME( 0x08, 0x08, "Yakuman Bonuses Per Cycle" )    PORT_DIPLOCATION("DIP3:4")
 	PORT_DIPSETTING(    0x08, "1" )
 	PORT_DIPSETTING(    0x00, "2" )
@@ -3275,12 +3154,12 @@ static INPUT_PORTS_START( majxtal7 )
 	PORT_DIPNAME( 0x01, 0x01, "Last Chance" )                  PORT_DIPLOCATION("DIP4:1")
 	PORT_DIPSETTING(    0x01, "Free" )
 	PORT_DIPSETTING(    0x00, "Paid" )
-	PORT_DIPNAME( 0x02, 0x02, "Pay Rate?" )                    PORT_DIPLOCATION("DIP4:2")
-	PORT_DIPSETTING(    0x02, DEF_STR( High ) )
-	PORT_DIPSETTING(    0x00, DEF_STR( Low ) )
-	PORT_DIPNAME( 0x04, 0x04, "Choose Bonus" )                 PORT_DIPLOCATION("DIP4:3")
-	PORT_DIPSETTING(    0x04, DEF_STR( Off ) )
-	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
+	PORT_DIPNAME( 0x02, 0x02, "Renchan Rate" )                 PORT_DIPLOCATION("DIP4:2")
+	PORT_DIPSETTING(    0x02, DEF_STR(Off) )
+	PORT_DIPSETTING(    0x00, DEF_STR(On) )
+	PORT_DIPNAME( 0x04, 0x04, "Auto Reach" )                   PORT_DIPLOCATION("DIP4:3")
+	PORT_DIPSETTING(    0x04, DEF_STR(Off) )
+	PORT_DIPSETTING(    0x00, DEF_STR(On) )
 	PORT_DIPNAME( 0x08, 0x08, DEF_STR(Unknown) )               PORT_DIPLOCATION("DIP4:4")
 	PORT_DIPSETTING(    0x00, DEF_STR(Off) )
 	PORT_DIPSETTING(    0x08, DEF_STR(On) )
@@ -3428,7 +3307,7 @@ static INPUT_PORTS_START( tenkai )
 	PORT_DIPSETTING(    0x08, "2" )                                                               // レート　２
 	PORT_DIPSETTING(    0x04, "3" )                                                               // レート　３
 	PORT_DIPSETTING(    0x00, "5" )                                                               // レート　５
-	MAHJONG_YAKUMAN_BONUS(4, "SW 2:5,6,7")                                                        // 役満ボーナスの設定周期
+	MAHJONG_YAKUMAN_BONUS(4, 0x04, "SW 2:5,6,7")                                                  // 役満ボーナスの設定周期
 	PORT_DIPNAME( 0x80, 0x00, "Yakuman Bonuses Per Cycle" )     PORT_DIPLOCATION("SW 2:8")        // 役満ボーナスの回数設定周期毎に
 	PORT_DIPSETTING(    0x00, "1" )                                                               // １回
 	PORT_DIPSETTING(    0x80, "2" )                                                               // ２回
@@ -3599,7 +3478,7 @@ static INPUT_PORTS_START( mjreach )
 	PORT_DIPSETTING(    0x08, "2" )                                                                // レート２
 	PORT_DIPSETTING(    0x04, "3" )                                                                // レート３
 	PORT_DIPSETTING(    0x00, "5" )                                                                // レート５
-	MAHJONG_YAKUMAN_BONUS(4, "DIP-SW2:5,6,7")                                                      // 役満ボーナスチャンスの設定周期
+	MAHJONG_YAKUMAN_BONUS(4, 0x04, "DIP-SW2:5,6,7")                                                // 役満ボーナスチャンスの設定周期
 	PORT_DIPNAME( 0x80, 0x00, "Yakuman Bonuses Per Cycle" )     PORT_DIPLOCATION("DIP-SW2:8")      // 役満ボーナスの回数設定周期毎に
 	PORT_DIPSETTING(    0x00, "1" )                                                                // １回
 	PORT_DIPSETTING(    0x80, "2" )                                                                // ２回
@@ -3672,7 +3551,7 @@ static INPUT_PORTS_START( mjreach )
 	PORT_DIPSETTING(    0x20, "Small" )                                                            // 小さい
 	PORT_DIPSETTING(    0x00, DEF_STR(Normal) )                                                    // 通常
 	PORT_DIPNAME( 0x40, 0x40, "Renchan Gal Display" )           PORT_DIPLOCATION("DIP-SW4:9")      // 連荘ギャルの表示の方式
-	PORT_DIPSETTING(    0x40, "After Each Win" )                                                   // 勝つごとに表示 (= On according to manual page?)
+	PORT_DIPSETTING(    0x40, "After Every Win" )                                                  // 勝つごとに表示 (= On according to manual page?)
 	PORT_DIPSETTING(    0x00, "After 3 Consecutive Wins" )                                         // ３連荘のみ表示 (= Off according to manual page?)
 	PORT_DIPNAME( 0x80, 0x80, DEF_STR(Unknown) )                PORT_DIPLOCATION("DIP-SW4:10")     // ＯＦＦ固定
 	PORT_DIPSETTING(    0x80, DEF_STR(Off) )
@@ -3714,7 +3593,7 @@ static INPUT_PORTS_START( gekisha )
 	PORT_DIPSETTING(    0x00, "Active High" )
 
 	PORT_START("DSW3")  // $7c22
-	MAHJONG_YAKUMAN_BONUS(0, "SW3:1,2,3") // 役満ボーナスの設定
+	MAHJONG_YAKUMAN_BONUS(0, 0x04, "SW3:1,2,3") // 役満ボーナスの設定
 	PORT_DIPNAME( 0x08, 0x08, "Yakuman Bonuses Per Cycle" ) PORT_DIPLOCATION("SW3:4")// 役満ボーナスの回数設定周期毎に
 	PORT_DIPSETTING(    0x08, "1" ) // １回
 	PORT_DIPSETTING(    0x00, "2" ) // ２回
@@ -3763,13 +3642,13 @@ static INPUT_PORTS_START( gekisha )
 	PORT_DIPSETTING(    0x40, DEF_STR( Yes ) )
 
 	PORT_START("COINS")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) // Pay
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) // Pay
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_SERVICE )      // Test
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )  // Analyzer
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MEMORY_RESET ) // Memory Reset
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_COIN2 )        // Note
-	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_COIN1 )        // Coin
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_SERVICE )       // Test
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )   // Analyzer
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MEMORY_RESET )  // Memory Reset
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_COIN2 )         // Note
+	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_COIN1 )         // Coin
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_UNKNOWN )
 
 	PORT_INCLUDE( mahjong_matrix_2p_bet_wup )
@@ -4254,7 +4133,7 @@ void dynax_adpcm_state::yarunara(machine_config &config)
 	hnoridur(config);
 
 	// basic machine hardware
-	m_maincpu->set_addrmap(AS_PROGRAM, &dynax_adpcm_state::yarunara_mem_map);
+	m_maincpu->set_addrmap(AS_PROGRAM, &dynax_adpcm_state::nanajign_mem_map);
 	m_maincpu->set_addrmap(AS_IO, &dynax_adpcm_state::yarunara_io_map);
 
 	m_bankdev->set_addrmap(AS_PROGRAM, &dynax_adpcm_state::yarunara_banked_map);
@@ -4291,7 +4170,7 @@ void dynax_adpcm_state::mcnpshnt(machine_config &config)
 {
 	hnoridur(config);
 
-	m_maincpu->set_addrmap(AS_PROGRAM, &dynax_adpcm_state::mcnpshnt_mem_map);
+	m_maincpu->set_addrmap(AS_PROGRAM, &dynax_adpcm_state::nanajign_mem_map);
 	m_maincpu->set_addrmap(AS_IO, &dynax_adpcm_state::mcnpshnt_io_map);
 
 	MCFG_VIDEO_START_OVERRIDE(dynax_adpcm_state, mcnpshnt) // different priorities
@@ -4495,6 +4374,82 @@ void dynax_adpcm_state::mjembase(machine_config &config)
 	MCFG_VIDEO_START_OVERRIDE(dynax_adpcm_state, mjembase)
 }
 
+void dynax_state::qyjdzjp(machine_config &config)
+{
+	/* basic machine hardware */
+	TMPZ84C015(config, m_maincpu, 21.477272_MHz_XTAL / 2);
+	m_maincpu->set_addrmap(AS_PROGRAM, &dynax_state::nanajign_mem_map);
+	m_maincpu->set_addrmap(AS_IO, &dynax_state::qyjdzjp_io_map);
+
+	ADDRESS_MAP_BANK(config, m_bankdev).set_map(&dynax_state::mjelctrn_banked_map).set_data_width(8).set_addr_width(20).set_stride(0x8000);
+
+	NVRAM(config, "nvram", nvram_device::DEFAULT_ALL_0);
+
+	LS259(config, m_mainlatch); // IC25
+	m_mainlatch->q_out_cb<0>().set(FUNC(dynax_state::flipscreen_w));
+	m_mainlatch->q_out_cb<1>().set(FUNC(dynax_state::layer_half_w));
+	m_mainlatch->q_out_cb<2>().set(FUNC(dynax_state::layer_half2_w));
+	// Q3, Q4 seem to be related to wrap around enable
+
+	ls259_device &outlatch(LS259(config, "outlatch")); // IC61
+	outlatch.q_out_cb<0>().set(FUNC(dynax_state::coincounter_0_w));
+	outlatch.q_out_cb<1>().set(FUNC(dynax_state::coincounter_1_w));
+	outlatch.q_out_cb<2>().set(m_hopper, FUNC(hopper_device::motor_w));
+
+	HOPPER(config, m_hopper, attotime::from_msec(50));
+
+	/* video hardware */
+	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
+	m_screen->set_refresh_hz(60);
+	m_screen->set_vblank_time(ATTOSECONDS_IN_USEC(0));
+	m_screen->set_size(512, 256+22);
+	m_screen->set_visarea(0, 512-1-4, 16, 256-1);
+	m_screen->set_screen_update(FUNC(dynax_state::screen_update_hnoridur));
+	m_screen->set_palette(m_palette);
+	m_screen->screen_vblank().set(m_maincpu, FUNC(tmpz84c015_device::trg0)).invert();
+
+	DYNAX_BLITTER_REV2(config, m_blitter, 0);
+	m_blitter->vram_out_cb().set(FUNC(dynax_state::hnoridur_blit_pixel_w));
+	m_blitter->scrollx_cb().set(FUNC(dynax_state::dynax_blit_scrollx_w));
+	m_blitter->scrolly_cb().set(FUNC(dynax_state::dynax_blit_scrolly_w));
+	m_blitter->ready_cb().set(m_maincpu, FUNC(tmpz84c015_device::trg1));
+	m_blitter->ready_cb().append(m_maincpu, FUNC(tmpz84c015_device::trg2));
+
+	PALETTE(config, m_palette).set_entries(16*256);
+
+	MCFG_VIDEO_START_OVERRIDE(dynax_state, mjelctrn)
+
+	/* sound hardware */
+	SPEAKER(config, "mono").front_center();
+
+	ay8912_device &ay8912(AY8912(config, "aysnd", 12_MHz_XTAL / 8));
+	ay8912.port_a_read_callback().set_ioport("DSW0");
+	ay8912.add_route(ALL_OUTPUTS, "mono", 0.20);
+
+	YM2413(config, "ym2413", 3.579545_MHz_XTAL).add_route(ALL_OUTPUTS, "mono", 1.0);
+
+	OKIM6295(config, "oki", 12_MHz_XTAL / 12, okim6295_device::PIN7_HIGH).add_route(ALL_OUTPUTS, "mono", 0.8);
+}
+
+
+void dynax_state::baoqingt(machine_config &config)
+{
+	qyjdzjp(config);
+
+	Z80(config.replace(), m_maincpu, 21.477272_MHz_XTAL / 4);
+	m_maincpu->set_addrmap(AS_PROGRAM, &dynax_state::nanajign_mem_map);
+	m_maincpu->set_addrmap(AS_IO, &dynax_state::baoqingt_io_map);
+	m_maincpu->set_vblank_int("screen", FUNC(dynax_state::irq0_line_hold));
+
+	m_screen->screen_vblank().remove();
+
+	m_blitter->ready_cb().set_inputline(m_maincpu, INPUT_LINE_NMI);
+
+	subdevice<ay8912_device>("aysnd")->set_clock(21.477272_MHz_XTAL / 16);
+
+	subdevice<okim6295_device>("oki")->set_clock(21.477272_MHz_XTAL / 16);
+}
+
 /***************************************************************************
                                     Neruton
 ***************************************************************************/
@@ -4605,6 +4560,16 @@ void dynax_state::mjreach(machine_config &config)
 {
 	tenkai(config);
 	m_mainlatch->q_out_cb<0>().set(FUNC(dynax_state::flipscreen_w)); // not inverted
+}
+
+void dynax_state::mjtkp2(machine_config &config)
+{
+	ougonhaib1(config);
+
+	tmp91640_device &tmp = downcast<tmp91640_device &>(*m_maincpu);
+	tmp.set_addrmap(AS_PROGRAM, &dynax_state::mjtkp2_map);
+
+	m_bankdev->set_map(&dynax_state::mjtkp2_banked_map);
 }
 
 void dynax_state::ougonhaib1(machine_config &config)
@@ -4905,7 +4870,7 @@ Dynax 1989
 ROM_START( drgpunch )
 	ROM_REGION( 0x90000, "maincpu", 0 ) // Z80 Code
 	ROM_LOAD( "2401.3d", 0x00000, 0x10000, CRC(b310709c) SHA1(6ad6cfb54856f65a888ac44e694890f32f26e049) )
-	ROM_LOAD( "2402.6d", 0x28000, 0x10000, CRC(d21ed237) SHA1(7e1c7b40c300578132ebd79cbad9f7976cc85947) )
+	ROM_LOAD( "2402.6d", 0x28000, 0x10000, CRC(d21ed237) SHA1(7e1c7b40c300578132ebd79cbad9f7976cc85947) ) // 01xxxxxxxxxxxxxx = 0xFF
 
 	ROM_REGION( 0x100000, "blitter", 0 )    // blitter data
 	ROM_LOAD( "2403.6c", 0x00000, 0x20000, CRC(b936f202) SHA1(4920d29a814ebdd74ce6f780cf821c8cb8142d9f) )
@@ -4916,6 +4881,30 @@ ROM_START( drgpunch )
 	ROM_LOAD( "2408.5a", 0xa0000, 0x20000, CRC(3a91e2b9) SHA1(b762c38ff2ebbd4ed832ca772973a15dd4a4ad73) )
 
 	ROM_REGION( 0x400, "proms", 0 ) // Color PROMs
+	ROM_LOAD( "2.18g", 0x000, 0x200, CRC(9adccc33) SHA1(acf4d5a28430378dbccc1b9fa0b6391cc8149fee) ) // FIXED BITS (0xxxxxxx)
+	ROM_LOAD( "1.17g", 0x200, 0x200, CRC(324fa9cf) SHA1(a03e23d9a9687dec4c23a8e41254a3f4b70c7e25) )
+ROM_END
+
+ROM_START( drgpunchbl ) // bootleg PCB with 'Nevada SRL' sticker
+	ROM_REGION( 0x90000, "maincpu", 0 ) // Z80 Code
+	ROM_LOAD( "1.o", 0x00000, 0x10000, CRC(b310709c) SHA1(6ad6cfb54856f65a888ac44e694890f32f26e049) ) // same as original
+	ROM_LOAD( "2.q", 0x30000, 0x08000, CRC(17f646c4) SHA1(07528756b61ee4219deb56319518fdb6e38bf3f3) ) // same as the second half of the original ROM (1xxxxxxxxxxxxxx = 0xFF)
+
+	ROM_REGION( 0x100000, "blitter", 0 )
+	ROM_LOAD( "3.j",  0x00000, 0x10000, CRC(cb90f576) SHA1(5399d3c7bdf68445dcb8c61b9fb5f199720d548a) )
+	ROM_LOAD( "4.k",  0x10000, 0x10000, CRC(ccf52f85) SHA1(fb9678c9a8f72f627b5c25dd00fb43b5582f1a96) )
+	ROM_LOAD( "5.l",  0x20000, 0x10000, CRC(7f716bec) SHA1(4b55f4548b3eccf63bf70f72007431f6788753ca) )
+	ROM_LOAD( "6.m",  0x30000, 0x10000, CRC(d0b22c51) SHA1(82eec2b7115e54718e10a84f72d97b78fc148733) )
+	ROM_LOAD( "7.e",  0x40000, 0x10000, CRC(72024013) SHA1(35a57455d48f119006d38ec1d3ef62883de48a79) )
+	ROM_LOAD( "8.f",  0x50000, 0x10000, CRC(19f2fe4c) SHA1(793b50f82c0a6dc3d121d624da7bed38d412628a) )
+	ROM_LOAD( "9.g",  0x60000, 0x10000, CRC(b5cffb81) SHA1(5c0024726dac8f59ffaa3945430420da7ba537a6) )
+	ROM_LOAD( "10.h", 0x70000, 0x10000, CRC(2b66b23f) SHA1(394c968f6d2c23b4993068d3ce61a9021d6cf5bd) )
+	ROM_LOAD( "11.a", 0x80000, 0x10000, CRC(97e35f87) SHA1(5d6b521e806065a01c1d326a91cc0e39d26f08ff) )
+	ROM_LOAD( "12.b", 0x90000, 0x10000, CRC(f29f0e2b) SHA1(eaf93d168383e7d9a38881f814393146f0c75662) )
+	ROM_LOAD( "13.c", 0xa0000, 0x10000, CRC(01707705) SHA1(83750be8e09317bef6f2f71fbe7281be4c9ad004) )
+	ROM_LOAD( "14.d", 0xb0000, 0x10000, CRC(2109af86) SHA1(1cd65a7e6d595665fca55c8d31aa47f7b56ab9fb) ) // only ROM with different content from the original
+
+	ROM_REGION( 0x400, "proms", 0 ) // Color, weren't dumped for this set but given the GFX data mostly matches, they are believed correct
 	ROM_LOAD( "2.18g", 0x000, 0x200, CRC(9adccc33) SHA1(acf4d5a28430378dbccc1b9fa0b6391cc8149fee) ) // FIXED BITS (0xxxxxxx)
 	ROM_LOAD( "1.17g", 0x200, 0x200, CRC(324fa9cf) SHA1(a03e23d9a9687dec4c23a8e41254a3f4b70c7e25) )
 ROM_END
@@ -5889,6 +5878,19 @@ ROM_START( mjelct3a )
 	ROM_LOAD( "eb-02.rom", 0x100000, 0x080000, CRC(e1f1b431) SHA1(04a612aff4c30cb8ea741f228bfa7e4289acfee8) )
 ROM_END
 
+ROM_START( mjelct3b ) // code almost identical to mjelct3
+	ROM_REGION( 0x50000, "maincpu", 0 ) // Z80 Code
+	ROM_LOAD( "se-3010",   0x00000, 0x20000, CRC(bcdb5827) SHA1(f27987a0ef2146ba18f0243cb4409f48da772140) )
+	ROM_RELOAD(            0x10000, 0x08000 )
+	ROM_CONTINUE(          0x28000, 0x08000 )
+	ROM_CONTINUE(          0x20000, 0x08000 )
+	ROM_CONTINUE(          0x18000, 0x08000 )
+
+	ROM_REGION( 0x200000, "blitter", 0 )   // blitter data
+	ROM_LOAD( "eb-01.rom", 0x000000, 0x100000, CRC(e5c41448) SHA1(b8322e32b0cb3d771316c9c4f7be91de6e422a24) )
+	ROM_LOAD( "eb-02.rom", 0x100000, 0x080000, CRC(f5b354d1) SHA1(d3f35d090de9af3f50aae9ff11de731950256212) ) // different GFX ROM
+ROM_END
+
 /***************************************************************************
 Mahjong Electron Base (bootleg)
 
@@ -5927,15 +5929,212 @@ Z84C015 - Toshiba TMPZ84C015BF-6 Z80 compatible CPU
 ROM_START( mjelctrb )
 	ROM_REGION( 0x50000, "maincpu", 0 ) // Z80 Code
 	ROM_LOAD( "prog.u27", 0x00000, 0x20000, CRC(688990ca) SHA1(34825cee8f76de93f12ccf2a1021f9c5369da46a) )
+	ROM_RELOAD(           0x28000, 0x08000 )
+	ROM_CONTINUE(         0x20000, 0x08000 )
+	ROM_CONTINUE(         0x18000, 0x08000 )
+	ROM_CONTINUE(         0x10000, 0x08000 )
+
+	ROM_REGION( 0x200000, "blitter", 0 )   // blitter data
+	ROM_LOAD( "eb-01.rom", 0x000000, 0x100000, CRC(e5c41448) SHA1(b8322e32b0cb3d771316c9c4f7be91de6e422a24) )
+	ROM_LOAD( "eb-02.rom", 0x100000, 0x080000, CRC(e1f1b431) SHA1(04a612aff4c30cb8ea741f228bfa7e4289acfee8) )
+ROM_END
+
+// bootleg PCB with TMPZ84C015 with flying wire to the program ROM, AL9106 custom, GM68B45S, YM2149F, CCX413-2, 4 banks of 8 DIP switches
+ROM_START( mjelct3bl )
+	ROM_REGION( 0x50000, "maincpu", 0 ) // Z80 Code
+	ROM_LOAD( "rom.u3", 0x00000, 0x20000, CRC(2cc0bbd8) SHA1(0653de340d470d209649b82b1844c3c3da5c545a) )
+	ROM_CONTINUE(       0x00000, 0x20000 )
+	ROM_RELOAD(         0x10000, 0x08000 )
+	ROM_CONTINUE(       0x28000, 0x08000 )
+	ROM_CONTINUE(       0x20000, 0x08000 )
+	ROM_CONTINUE(       0x18000, 0x08000 )
+
+	ROM_REGION( 0x200000, "blitter", 0 )   // blitter data, not dumped for this set
+	ROM_LOAD( "e1.u82", 0x000000, 0x100000, BAD_DUMP CRC(e5c41448) SHA1(b8322e32b0cb3d771316c9c4f7be91de6e422a24) )
+	ROM_LOAD( "e2.u83", 0x100000, 0x080000, BAD_DUMP CRC(e1f1b431) SHA1(04a612aff4c30cb8ea741f228bfa7e4289acfee8) )
+ROM_END
+
+// uses Z80 CPU and Z80CTC，ROM A17（30p）—— Z80 CPU M1（27p）
+ROM_START( mjelct3bla ) // TODO: correct ROM loading
+	ROM_REGION( 0x50000, "maincpu", 0 ) // Z80 Code
+	ROM_LOAD( "020.u3", 0x00000, 0x20000, CRC(34223e3b) SHA1(c3e936e9d6ba504ce240090cc675a55d0cde80fa) )
+	ROM_CONTINUE(       0x00000, 0x20000 )
+	ROM_RELOAD(         0x10000, 0x08000 )
+	ROM_CONTINUE(       0x28000, 0x08000 )
+	ROM_CONTINUE(       0x20000, 0x08000 )
+	ROM_CONTINUE(       0x18000, 0x08000 )
+
+	ROM_REGION( 0x200000, "blitter", 0 )   // blitter data, not dumped for this set
+	ROM_LOAD( "e1.u82", 0x000000, 0x100000, BAD_DUMP CRC(e5c41448) SHA1(b8322e32b0cb3d771316c9c4f7be91de6e422a24) )
+	ROM_LOAD( "e2.u83", 0x100000, 0x080000, BAD_DUMP CRC(e1f1b431) SHA1(04a612aff4c30cb8ea741f228bfa7e4289acfee8) )
+ROM_END
+
+// uses Z80 CPU and Z80CTC，ROM A17（30p）—— Z80 CPU M1（27p）
+ROM_START( mjelct3blb ) // TODO: correct ROM loading
+	ROM_REGION( 0x50000, "maincpu", 0 ) // Z80 Code
+	ROM_LOAD( "mjelct3bl1-fast ron-pld.u3", 0x00000, 0x20000, CRC(a8365b24) SHA1(76ec04fa9f5fa35c28733db4eb931d773d078bfc) )
+	ROM_CONTINUE(                           0x00000, 0x20000 )
+	ROM_RELOAD(                             0x10000, 0x08000 )
+	ROM_CONTINUE(                           0x28000, 0x08000 )
+	ROM_CONTINUE(                           0x20000, 0x08000 )
+	ROM_CONTINUE(                           0x18000, 0x08000 )
+
+	ROM_REGION( 0x200000, "blitter", 0 )   // blitter data, not dumped for this set
+	ROM_LOAD( "e1.u82", 0x000000, 0x100000, BAD_DUMP CRC(e5c41448) SHA1(b8322e32b0cb3d771316c9c4f7be91de6e422a24) )
+	ROM_LOAD( "e2.u83", 0x100000, 0x080000, BAD_DUMP CRC(e1f1b431) SHA1(04a612aff4c30cb8ea741f228bfa7e4289acfee8) )
+ROM_END
+
+/***************************************************************************
+Que You Ji - Dian Zi Ji Pan Jiaqiang Ban (Mahjong Electron Base bootleg)
+Hom Inn, 1997
+Hardware Info By Guru
+---------------------
+
+2J-255
+|--------------------------------------------|
+|    VOL  SOCKET2  |-------|                 |
+|uPC1241H          |       | 41264     41264 |
+|         S-1.U8   |AL9106A|                 |
+|                  |       | 41264     41264 |
+|M3567             |-------|                 |
+|        3.579545MHz         6116      41264 |
+|                                            |
+|WF19054                     6116      41264 |
+|                                            |
+|                                            |
+|6845                      |-------|         |
+|         |-------|        |TAICOM |         |
+|         | ZILOG |        |AL9301 |     DSW2|
+|         |Z80EIPC|        |       |         |
+|         |-------|        |-------|     DSW3|
+|                             DSW1           |
+|  SOCKET1        21.477272MHz           DSW4|
+|    6264 C1815     T518A C1815              |
+|SC                                      DSW5|
+|  |-| 10-WAY |----|     18-WAY      |--|    |
+|--| |--------|    |-----------------|  |----|
+Notes:
+      AL9106 - TAICOM Custom Chip
+      AL9301 - TAICOM AL9301 Graphics Generator (QFP160)
+     Z84EIPC - Zilog Z84C1510FEC Z80 EIPC (Enhanced Intelligent Peripheral Controller).
+               Compatible with Toshiba TMPZ84C015BF-6. Clock Input 10.7375MHz [21.477272/2]
+       M3567 - Clone of Yamaha YM2413 OPLL FM Sound Chip. Clock Input 3.579545MHz
+     WF19054 - Winbond WF19054 clone of AY-3-8910. Clock 1.500MHz [12/8]
+    UPC1241H - NEC uPC1241H 7W Audio Power Amplifier
+        6116 - 6116 2kB x8-bit SRAM
+        6264 - 6264 8kB x8-bit SRAM (battery-backed)
+       41264 - NEC D41264C-15 Dual-Port RAM with 64kB x4-bit DRAM Port and 256 x4-bit Serial Port
+        6845 - Goldstar GM68B45S CRT Controller
+       T518A - Mitsumi T518A Reset Chip
+        DSW1 - 2-Position DIP Switch
+      DSW2-5 - 8-Position DIP Switch
+          SC - 0.047F 5.5V Super Cap
+       C1815 - 2SC1815 General-Purpose NPN Transistor
+         358 - LM358 Dual Operational Amplifier
+      S-1.U8 - 27C4000 mask ROM
+     SOCKET1 - Plugged in here is a sub-board marked 'HOM INN MJXB-1' containing....
+               12MHz Crystal
+               EPROM 27C020 (Oki Samples)
+               EPROM 27C010 (Z80 Program)
+               Oki M6295 ADPCM Sample Player. Clock Input 1.000MHz [12/12]. Pin 7 HIGH
+               ALTERA EPM7032 PLCC44 CPLD
+               7404 Logic Chip
+               74161 Logic Chip
+               78L05 5V Linear Regulator (TO92)
+               2SC945 Transistor
+               10-Pin Connector with cable joined to parts on main board with 7 wires.
+     SOCKET2 - Plugged in here is a sub-board marked 'HOM INN MJXB-2' containing....
+               2x 27C4000 mask ROMs
+               74LS00 Logic Chip
+               Socket on main board is wired for 8Mbit ROM so when highest address line
+               A19 is low or high the logic chip enables OE on one of the 4Mbit ROMs.
+***************************************************************************/
+
+ROM_START( qyjdzjp )
+	ROM_REGION( 0x50000, "maincpu", 0 ) // Z80 Code
+	ROM_LOAD( "prg.u24", 0x00000, 0x20000, CRC(86d53500) SHA1(61f9aed3da2b49bf9c45ee8d7416cd2ea0300453) )
 	ROM_RELOAD(          0x28000, 0x08000 )
 	ROM_CONTINUE(        0x20000, 0x08000 )
 	ROM_CONTINUE(        0x18000, 0x08000 )
 	ROM_CONTINUE(        0x10000, 0x08000 )
 
 	ROM_REGION( 0x200000, "blitter", 0 )   // blitter data
-	ROM_LOAD( "eb-01.rom", 0x000000, 0x100000, CRC(e5c41448) SHA1(b8322e32b0cb3d771316c9c4f7be91de6e422a24) )
-	ROM_LOAD( "eb-02.rom", 0x100000, 0x080000, CRC(e1f1b431) SHA1(04a612aff4c30cb8ea741f228bfa7e4289acfee8) )
+	ROM_LOAD( "s-1.u8",   0x000000, 0x100000, CRC(e5c41448) SHA1(b8322e32b0cb3d771316c9c4f7be91de6e422a24) )
+	ROM_LOAD( "4m-l.bin", 0x100000, 0x080000, CRC(140738f6) SHA1(996c92ec33b8a3b819a2be7795248c9e214562df) )
+	ROM_LOAD( "4m-h.bin", 0x180000, 0x080000, CRC(865987c2) SHA1(0711e309e8c48af7d92b59dbd1407636ce0455ac) )
+
+	ROM_REGION( 0x40000, "oki", 0 )
+	ROM_LOAD( "oki.u22", 0x00000, 0x40000, CRC(a6340587) SHA1(91f55776fc4f20720f3e3ca965ba9388d3668881) )
 ROM_END
+
+
+/*******************************************************************
+Bao Qing Tian, TIC, 1995
+Hardware Info by Guru
+---------------------
+
+no number (bootleg-like so probably a rip-off of something else)
+|-------------------------------------------------|
+| uPC1241H   VOL1    VOL2          6606    TIC01  |
+|            4558    4558                         |
+|                           95123     3.579545MHz |
+|-|             2018                             8|
+  |                         95101          SCAP  L|
+|-|             2018                             I|
+|                                          6264  N|
+|1                          Z8400A               E|
+|8          |---------|                          R|
+|W          |         |       |------|    TIC2-2  |
+|A          |  95124  |       |PLCC68|            |
+|Y          |         |       |ALTERA|    TIC03   |
+|-|  SW4    |         |       |------|          |-|
+  |         |---------|  21.47727MHz  T518B     |
+|-|  SW3                                  TIC04 |-|
+|          HM53462 HM53462    |----|              |
+|10  SW2   HM53462 HM53462    |TK101      TIC05 10|
+|WAY       HM53462 HM53462    |----|           WAY|
+|                                                 |
+|-|  SW1      JAMMA        |--|           TIC06   |
+  |------------------------|  |-------------------|
+Notes:
+     Z8400A - Z80A CPU. Clock 5.3693175MHz [21.47727/4]
+       6606 - Equivalent to OKI M6295 4-Channel ADPCM Voice Synthesis LSI. Clock input 1.342329375MHz [21.47727/16]. Pin 7 HIGH
+      95123 - DIP18 IC. Could be equivalent to Yamaha YM2413 OPLL FM Synthesis Sound Chip. Clock input 3.579545MHz
+      95101 - Equivalent to AY-3-8910. Clock input 1.342329375MHz [21.47727/16]
+      95124 - Custom Chip (video)
+      TK101 - Custom Chip (I/O?)
+       2018 - 2kB x8-bit SRAM
+       6264 - 8kB x8-bit SRAM (battery-backed)
+    HM53462 - Hitachi HM53462 Multi-Port RAM; 64k-word x4-bit DRAM and 256-word x4-bit Serial Access RAM
+              Seems to be the same type of Multi-Port RAM used on Mortal Kombat.
+      SW1-4 - 8-position DIP Switch
+   uPC1241H - NEC uPC1241H Audio Power Amp
+       VOL1 - Music Volume Pot
+       VOL2 - Voice Volume Pot
+       4558 - Dual Operational Amplifier
+     PLCC68 - Unknown PLCC68 IC. Altera logo partially visible so some kind of Altera CPLD
+      T518B - Mitsumi PST518B Master Reset IC (TO92)
+       SCAP - 5.5V 0.1F Supercap
+      TIC01 - 27C2001 EPROM (oki samples)
+     TIC2-2 - 27C2001 EPROM (main program)
+   TIC03-06 - 27C4001 OTP EPROM (gfx)
+*******************************************************************/
+
+ROM_START( baoqingt )
+	ROM_REGION( 0x50000, "maincpu", 0 )
+	ROM_LOAD( "tic2-2.u4", 0x00000, 0x40000, CRC(a4d16608) SHA1(254aae41284fae0eeda6ab7f72ec907cd9a5c7e2) )
+	ROM_RELOAD(          0x10000, 0x40000 )
+
+	ROM_REGION( 0x200000, "blitter", ROMREGION_ERASE00 )
+	ROM_LOAD( "tic03.u41", 0x000000, 0x80000, CRC(00c9faf2) SHA1(4eaebfc9506d7e3925e43f44c0d396c1ba38a214) ) // standard mahjong gameplay GFX are here
+	ROM_LOAD( "tic04.u42", 0x080000, 0x80000, CRC(cb8f0831) SHA1(122da594df6b025f96eb30eb0edcdef2c0f59556) ) // bonus game GFX are here
+	ROM_LOAD( "tic06.u44", 0x100000, 0x80000, CRC(a093594e) SHA1(56931c1014a862fa4db2d32eb97deda20e41d92f) ) // title screen
+	ROM_LOAD( "tic05.u43", 0x180000, 0x80000, CRC(5736a700) SHA1(b61e011858a3ee91fd69d49450b48e1d157cb11d) )
+
+	ROM_REGION( 0x40000, "oki", 0 )
+	ROM_LOAD( "tic01.u9", 0x00000, 0x40000, CRC(b16b5dbf) SHA1(0896bb8a32c9a2d9645ce40653549b4ec9ce01a4) )
+ROM_END
+
 
 /***************************************************************************
 
@@ -6042,7 +6241,7 @@ ROM_START( shpeng )
 	/* this rom doesn't belong here, it is from Dragon Punch, but shpeng hardware and game code is a hack
 	   of dragon punch.  This rom is better than the bad dump above for the sprite colours, although the
 	   colours on the intro/cutscenes are wrong */
-	ROM_LOAD_OPTIONAL( "1.17g", 0x200, 0x200, CRC(324fa9cf) SHA1(a03e23d9a9687dec4c23a8e41254a3f4b70c7e25) )
+	ROM_LOAD( "1.17g", 0x200, 0x200, CRC(324fa9cf) SHA1(a03e23d9a9687dec4c23a8e41254a3f4b70c7e25) )
 ROM_END
 
 /*
@@ -6332,6 +6531,20 @@ ROM_START( mjreach )
 	ROM_RELOAD(             0x180000, 0x80000 )
 ROM_END
 
+ROM_START( mjreacha )
+	ROM_REGION( 0x50000, "maincpu", 0 )
+	ROM_LOAD( "cs16-1.u15",     0x00000, 0x40000, CRC(d557ddf2) SHA1(504a8184270524a22be7767cc17cc33465e42d21) ) // SLDH
+	ROM_RELOAD(                 0x10000, 0x40000 )
+	ROM_LOAD( "mjreach-mcu.u3", 0x00000, 0x02000, CRC(091a85dc) SHA1(964ccbc13466464c2feee10f807078ec517bed5c) )
+
+	ROM_REGION( 0x200000, "blitter", 0 )   // blitter data
+	ROM_LOAD( "cs16-3.u13", 0x000000, 0x80000, CRC(90f6036f) SHA1(f92aafd0316dc235e58d615825f3110806bc2cf9) )
+	ROM_LOAD( "cs16-2.u12", 0x080000, 0x40000, CRC(5558428d) SHA1(b5e30673695b6e56a8c513b484f4f9c225c682cc) )
+	ROM_RELOAD(             0x0c0000, 0x40000 )
+	ROM_LOAD( "cs16-3.u13", 0x100000, 0x80000, CRC(90f6036f) SHA1(f92aafd0316dc235e58d615825f3110806bc2cf9) )
+	ROM_RELOAD(             0x180000, 0x80000 )
+ROM_END
+
 /***************************************************************************
 
 Mahjong Reach (bootleg)
@@ -6380,7 +6593,7 @@ ROM_END
 
 ROM_START( mjreachp2 ) // BTANB: typo on title screen shows 'Mahjong Reach Rart II' (verified with reference pics)
 	ROM_REGION( 0x50000, "maincpu", 0 )
-	ROM_LOAD( "880q.wc",         0x00000, 0x40000, CRC(a92954bc) SHA1(473778eabd0ecc7b66c7e66ab7eb3d8b40554434) )
+	ROM_LOAD( "8801.2c",         0x00000, 0x40000, CRC(a92954bc) SHA1(473778eabd0ecc7b66c7e66ab7eb3d8b40554434) )
 	ROM_RELOAD(                  0x10000, 0x40000 )
 	ROM_LOAD( "mjreach2-mcu.5b", 0x00000, 0x02000, CRC(091a85dc) SHA1(964ccbc13466464c2feee10f807078ec517bed5c) ) // MCU has pins 9 to 12 & 15 to 16 stripped out
 
@@ -6849,9 +7062,33 @@ ROM_START( mjcomv1 )
 ROM_END
 
 
+/*
+特急回転盤 Part 2 - Mahjong Tokkyū Kaiten-ban Part 2
+Dynax 1991
+*/
+
+ROM_START( mjtkp2 )
+	ROM_REGION( 0x50000, "maincpu", ROMREGION_ERASE00 )
+	ROM_LOAD( "5909c_dynax.5a", 0x00000, 0x20000, CRC(61916017) SHA1(2f39749512a3e36966e3bd787f1fa3378e96b4bb) )
+	ROM_RELOAD(                 0x10000, 0x20000 )
+	ROM_RELOAD(                 0x30000, 0x20000 )
+	ROM_LOAD( "tmp91c640n.2c",  0x00000, 0x04000, CRC(8fe634dd) SHA1(f11cd2160ecabe71edfddc956c323ff2e75d6cce) ) // chip type guessed (scratched off). MCU has pins  9, 10, 13, 14, 15, 16 stripped out
+
+	ROM_REGION( 0x100000, "blitter", ROMREGION_ERASE00 )
+	ROM_LOAD( "5901_dynax.15a", 0x00000, 0x20000, CRC(8b9d0192) SHA1(77ba366c87d3f1eb5549de30a1d066684950622a) ) // points, bets
+	ROM_LOAD( "5902_dynax.13a", 0x20000, 0x20000, CRC(c053ba24) SHA1(76524a5a8f727c50be13adbca5eb9388c1f9887c) ) // text and mahjong tiles
+	ROM_LOAD( "5903_dynax.12a", 0x40000, 0x20000, CRC(20f68aa7) SHA1(e18d39962caefb22c1ff39fd0fda0563877fa79c) )
+	ROM_LOAD( "5904_dynax.10a", 0x60000, 0x20000, CRC(098a15dc) SHA1(4cc3313ca56c9c9a42e294e6d837c24c00463f73) ) // girl check D-E
+	ROM_LOAD( "5908_dynax.6a",  0x80000, 0x20000, CRC(7ef47e7b) SHA1(15d05b8c52b82f1b43f0cc03979b2f2e8dd05ddd) ) // girl check B
+	ROM_LOAD( "5907_dynax.7a",  0xa0000, 0x20000, CRC(f36baf94) SHA1(8474404a4137f7448c66a5adf507b474a97443a2) ) // girl check C
+	ROM_LOAD( "5906_dynax.8a",  0xc0000, 0x20000, CRC(283935b1) SHA1(6af14310e44dfd7102f3c649c0c729ef406545e6) ) // girl check A
+	ROM_LOAD( "5905a_dynax.9a", 0xe0000, 0x20000, CRC(62f9f922) SHA1(b75978db127fa24b28ac2c7c2587f3a5a360df6d) ) // title
+ROM_END
+
+
 /***************************************************************************
 
-Hana Jingi
+華仁義 Hana Jingi
 Dynax 1990
 
 PCB Layout
@@ -7040,7 +7277,8 @@ GAME( 1989, hnkochou,   hanamai,  hanamai,    hnkochou, dynax_adpcm_state, empty
 GAME( 1990, hjingi,     0,        hjingi,     hjingi,   dynax_adpcm_state, empty_init,    ROT180, "Dynax",                     "Hana Jingi (Japan set 1)",                                      MACHINE_SUPPORTS_SAVE ) // 1990 05/01 11:58:24
 GAME( 1990, hjingia,    hjingi,   hjingi,     hjingi,   dynax_adpcm_state, empty_init,    ROT180, "Dynax",                     "Hana Jingi (Japan set 2)",                                      MACHINE_SUPPORTS_SAVE ) // 1990 05/01 11:58:24
 GAME( 1989, hnoridur,   hjingi,   hnoridur,   hnoridur, dynax_adpcm_state, empty_init,    ROT180, "Dynax",                     "Hana Oriduru (Japan)",                                          MACHINE_SUPPORTS_SAVE )
-GAME( 1989, drgpunch,   0,        sprtmtch,   drgpunch, dynax_state,       empty_init,    ROT0,   "Dynax",                     "Dragon Punch (Japan)",                                          MACHINE_SUPPORTS_SAVE )
+GAME( 1989, drgpunch,   0,        sprtmtch,   drgpunch, dynax_state,       empty_init,    ROT0,   "Dynax",                     "Dragon Punch (Japan, ver. 1.30)",                               MACHINE_SUPPORTS_SAVE )
+GAME( 1989, drgpunchbl, drgpunch, sprtmtch,   drgpunch, dynax_state,       empty_init,    ROT0,   "Dynax",                     "Dragon Punch (Japan, ver. 1.30, bootleg)",                      MACHINE_SUPPORTS_SAVE )
 GAME( 1989, sprtmtch,   drgpunch, sprtmtch,   sprtmtch, dynax_state,       empty_init,    ROT0,   "Dynax (Fabtek license)",    "Sports Match",                                                  MACHINE_SUPPORTS_SAVE )
 // these 3 are Korean hacks / bootlegs of Dragon Punch / Sports Match
 GAME( 1994, maya,       0,        sprtmtch,   drgpunch, blktouch_state,    init_maya,     ROT0,   "Promat",                    "Maya (set 1)",                                                  MACHINE_SUPPORTS_SAVE ) // this set has backgrounds blacked out in attract
@@ -7066,10 +7304,16 @@ GAME( 1993, mjelctrn,   0,        mjelctrn,   mjelctrn, dynax_adpcm_state, init_
 GAME( 1989, mjembase,   mjelctrn, mjembase,   mjembase, dynax_adpcm_state, init_mjelct3,  ROT180, "Dynax",                     "Mahjong Electromagnetic Base (Japan)",                          MACHINE_SUPPORTS_SAVE )
 GAME( 1990, mjelct3,    mjelctrn, mjelctrn,   mjelct3,  dynax_adpcm_state, init_mjelct3,  ROT180, "Dynax",                     "Mahjong Electron Base (parts 2 & 3, Japan set 1)",              MACHINE_SUPPORTS_SAVE )
 GAME( 1990, mjelct3a,   mjelctrn, mjelctrn,   mjelct3,  dynax_adpcm_state, init_mjelct3a, ROT180, "Dynax",                     "Mahjong Electron Base (parts 2 & 3, Japan set 2)",              MACHINE_SUPPORTS_SAVE )
+GAME( 1990, mjelct3b,   mjelctrn, mjelctrn,   mjelct3,  dynax_adpcm_state, init_mjelct3,  ROT180, "Dynax",                     "Mahjong Electron Base (parts 2 & 3, Japan set 3)",              MACHINE_SUPPORTS_SAVE )
 GAME( 1993, mjelctrb,   mjelctrn, mjelctrn,   mjelct3,  dynax_adpcm_state, init_mjelct3,  ROT180, "bootleg",                   "Mahjong Electron Base (parts 2 & 4, Japan bootleg)",            MACHINE_SUPPORTS_SAVE )
+GAME( 1993, mjelct3bl,  mjelctrn, mjelctrn,   mjelct3,  dynax_adpcm_state, init_mjelct3,  ROT180, "bootleg",                   "Mahjong Electron Base (parts 2 & 3, Japan bootleg set 1)",      MACHINE_NOT_WORKING | MACHINE_SUPPORTS_SAVE )
+GAME( 1993, mjelct3bla, mjelctrn, mjelctrn,   mjelct3,  dynax_adpcm_state, init_mjelct3,  ROT180, "bootleg",                   "Mahjong Electron Base (parts 2 & 3, Japan bootleg set 2)",      MACHINE_NOT_WORKING | MACHINE_SUPPORTS_SAVE )
+GAME( 1993, mjelct3blb, mjelctrn, mjelctrn,   mjelct3,  dynax_adpcm_state, init_mjelct3,  ROT180, "bootleg",                   "Mahjong Electron Base (parts 2 & 3, Japan bootleg set 3)",      MACHINE_NOT_WORKING | MACHINE_SUPPORTS_SAVE )
 GAME( 1990, majxtal7,   7jigen,   neruton,    majxtal7, dynax_adpcm_state, init_mjelct3,  ROT180, "Dynax",                     "Mahjong X-Tal 7 - Crystal Mahjong / Mahjong Diamond 7 (Japan)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE ) // reuses a subset of 7jigen assets
 GAME( 1990, neruton,    0,        neruton,    neruton,  dynax_adpcm_state, init_mjelct3,  ROT180, "Dynax / Yukiyoshi Tokoro",  "Mahjong Neruton Haikujiradan (Japan, Rev. B?)",                 MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
 GAME( 1990, nerutona,   neruton,  neruton,    nerutona, dynax_adpcm_state, init_mjelct3,  ROT180, "Dynax / Yukiyoshi Tokoro",  "Mahjong Neruton Haikujiradan (Japan, Rev. A?)",                 MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
+GAME( 1997, qyjdzjp,    mjelctrn, qyjdzjp,    mjelct3,  dynax_state,       empty_init,    ROT180, "bootleg (Hom Inn)",         "Que You Ji - Dian Zi Ji Pan Jiaqiang Ban (v201)",               MACHINE_SUPPORTS_SAVE )
+GAME( 1995, baoqingt,   0,        baoqingt,   mjelct3,  dynax_state,       empty_init,    ROT0,   "TIC",                       "Bao Qing Tian (TIC)",                                           MACHINE_NOT_WORKING | MACHINE_WRONG_COLORS | MACHINE_SUPPORTS_SAVE )
 GAME( 1991, hanayara,   0,        yarunara,   hanayara, dynax_adpcm_state, empty_init,    ROT180, "Dynax",                     "Hana wo Yaraneba! (Japan)",                                     MACHINE_SUPPORTS_SAVE )
 GAME( 1991, mjcomv1,    0,        mjangels,   mjcomv1,  dynax_adpcm_state, empty_init,    ROT180, "Dynax",                     "Mahjong Comic Gekijou Vol.1 (Japan)",                           MACHINE_SUPPORTS_SAVE )
 GAME( 1991, tenkai,     0,        tenkai,     tenkai,   dynax_state,       empty_init,    ROT0,   "Dynax",                     "Mahjong Tenkaigen (Japan)",                                     MACHINE_SUPPORTS_SAVE )
@@ -7081,7 +7325,9 @@ GAME( 1991, ougonhai,   0,        ougonhai,   ougonhai, dynax_state,       empty
 GAME( 1991, ougonhaib1, ougonhai, ougonhaib1, ougonhai, dynax_state,       empty_init,    ROT0,   "bootleg",                   "Mahjong Ougon no Pai (Japan bootleg set 1, medal)",             MACHINE_SUPPORTS_SAVE )
 GAME( 1991, ougonhaib2, ougonhai, ougonhaib1, ougonhai, dynax_state,       empty_init,    ROT0,   "bootleg",                   "Mahjong Ougon no Pai (Japan bootleg set 2, medal)",             MACHINE_SUPPORTS_SAVE )
 GAME( 1991, ougonhaib3, ougonhai, ougonhaib1, ougonhai, dynax_state,       empty_init,    ROT0,   "bootleg",                   "Mahjong Ougon no Pai (Japan bootleg set 3, medal)",             MACHINE_NOT_WORKING | MACHINE_SUPPORTS_SAVE )
-GAME( 1994, mjreach,    0,        mjreach,    mjreach,  dynax_state,       empty_init,    ROT0,   "Dynax",                     "Mahjong Reach (Ver. 1.00)",                                     MACHINE_SUPPORTS_SAVE )
+GAME( 1991, mjtkp2,     0,        mjtkp2,     mjreach,  dynax_state,       empty_init,    ROT0,   "Dynax",                     "Mahjong Tokkyu Kaiten-ban Part 2 (Japan)",                      MACHINE_IMPERFECT_COLORS | MACHINE_NOT_WORKING | MACHINE_SUPPORTS_SAVE ) // inputs / DSW, GFX glitches
+GAME( 1994, mjreach,    0,        mjreach,    mjreach,  dynax_state,       empty_init,    ROT0,   "Dynax",                     "Mahjong Reach (Ver. 1.00, set 1)",                              MACHINE_SUPPORTS_SAVE )
+GAME( 1994, mjreacha,   mjreach,  mjreach,    mjreach,  dynax_state,       empty_init,    ROT0,   "Dynax",                     "Mahjong Reach (Ver. 1.00, set 2)",                              MACHINE_SUPPORTS_SAVE )
 GAME( 1994, mjreachbl,  mjreach,  mjreach,    mjreach,  dynax_state,       empty_init,    ROT0,   "bootleg",                   "Mahjong Reach (Ver. 1.00, bootleg)",                            MACHINE_SUPPORTS_SAVE )
 GAME( 1994, mjreachp2,  mjreach,  mjreachp2,  mjreach,  dynax_state,       empty_init,    ROT0,   "Dynax",                     "Mahjong Reach Part II (Ver. D88)",                              MACHINE_SUPPORTS_SAVE )
 GAME( 1994, cdracula,   0,        cdracula,   cdracula, cdracula_state,    empty_init,    ROT0,   "Yun Sung (Escape license)", "Castle Of Dracula",                                             MACHINE_SUPPORTS_SAVE ) // not a Dynax board

@@ -59,16 +59,15 @@ ___________________________________________________________________________
 #include "emu.h"
 #include "bfm_comn.h"
 
-#include "awpvid.h"
 
 #include "cpu/m6809/m6809.h"
 #include "machine/6850acia.h"
 #include "machine/clock.h"
 #include "machine/meters.h"
 #include "machine/nvram.h"
-#include "machine/roc10937.h"  // vfd
 #include "machine/steppers.h" // stepper motor
 #include "sound/ay8910.h"
+#include "video/roc10937.h" // vfd
 
 #include "speaker.h"
 
@@ -220,8 +219,8 @@ void bfmsys85_state::reel12_w(uint8_t data)
 	m_reel[0]->update((data>>4)&0x0f);
 	m_reel[1]->update( data    &0x0f);
 
-	awp_draw_reel(machine(),"reel1", *m_reel[0]);
-	awp_draw_reel(machine(),"reel2", *m_reel[1]);
+	m_reel[0]->draw();
+	m_reel[1]->draw();
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -231,8 +230,8 @@ void bfmsys85_state::reel34_w(uint8_t data)
 	m_reel[2]->update((data>>4)&0x0f);
 	m_reel[3]->update( data    &0x0f);
 
-	awp_draw_reel(machine(),"reel3", *m_reel[2]);
-	awp_draw_reel(machine(),"reel4", *m_reel[3]);
+	m_reel[2]->draw();
+	m_reel[3]->draw();
 }
 
 ///////////////////////////////////////////////////////////////////////////

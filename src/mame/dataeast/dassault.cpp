@@ -213,7 +213,6 @@ TODO:
 #include "emu.h"
 
 #include "deco16ic.h"
-#include "decocomn.h"
 #include "decospr.h"
 
 #include "cpu/h6280/h6280.h"
@@ -279,7 +278,7 @@ private:
 
 	uint16_t m_priority = 0U;
 
-	void priority_w(offs_t offset, uint16_t data, uint16_t mem_mask = ~0);
+	void priority_w(uint16_t data);
 	void main_irq_ack_w(uint16_t data);
 	void sub_irq_ack_w(uint16_t data);
 	uint16_t control_r(offs_t offset);
@@ -368,7 +367,6 @@ void dassault_state::mix_layer(bitmap_rgb32 &bitmap, bitmap_ind16 *sprite_bitmap
 uint32_t dassault_state::screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect)
 {
 	uint16_t const flip = m_deco_tilegen[0]->pf_control_r(0);
-	uint16_t const priority = m_priority;
 
 	flip_screen_set(BIT(flip, 7));
 	m_sprgen[0]->set_flip_screen(BIT(flip, 7));
@@ -389,7 +387,7 @@ uint32_t dassault_state::screen_update(screen_device &screen, bitmap_rgb32 &bitm
 	m_deco_tilegen[1]->tilemap_2_draw(screen, bitmap, cliprect, TILEMAP_DRAW_OPAQUE, 0);
 
 	// The middle playfields can be swapped priority-wise
-	if ((priority & 3) == 0)
+	if ((m_priority & 3) == 0)
 	{
 		mix_layer(bitmap, sprite_bitmap1, cliprect, 0x0600, 0x0600, 0x400, 0xff); // 1
 		m_deco_tilegen[0]->tilemap_2_draw(screen, bitmap, cliprect, 0, 2); // 2
@@ -400,7 +398,7 @@ uint32_t dassault_state::screen_update(screen_device &screen, bitmap_rgb32 &bitm
 		mix_layer(bitmap, sprite_bitmap1, cliprect, 0x0000, 0x0600, 0x400, 0xff); // 128
 
 	}
-	else if ((priority & 3) == 1)
+	else if ((m_priority & 3) == 1)
 	{
 		mix_layer(bitmap, sprite_bitmap1, cliprect, 0x0600, 0x0600, 0x400, 0xff); // 1
 		m_deco_tilegen[1]->tilemap_1_draw(screen, bitmap, cliprect, 0, 2); // 2
@@ -410,7 +408,7 @@ uint32_t dassault_state::screen_update(screen_device &screen, bitmap_rgb32 &bitm
 		m_deco_tilegen[0]->tilemap_2_draw(screen, bitmap, cliprect, 0, 64); // 64
 		mix_layer(bitmap, sprite_bitmap1, cliprect, 0x0000, 0x0600, 0x400, 0xff); // 128
 	}
-	else if ((priority & 3) == 3)
+	else if ((m_priority & 3) == 3)
 	{
 		mix_layer(bitmap, sprite_bitmap1, cliprect, 0x0600, 0x0600, 0x400, 0xff); // 1
 		m_deco_tilegen[1]->tilemap_1_draw(screen, bitmap, cliprect, 0, 2); // 2
@@ -432,9 +430,9 @@ uint32_t dassault_state::screen_update(screen_device &screen, bitmap_rgb32 &bitm
 
 /**********************************************************************************/
 
-void dassault_state::priority_w(offs_t offset, uint16_t data, uint16_t mem_mask)
+void dassault_state::priority_w(uint16_t data)
 {
-	COMBINE_DATA(&m_priority);
+	m_priority = data;
 }
 
 void dassault_state::main_irq_ack_w(uint16_t data)
@@ -474,7 +472,7 @@ void dassault_state::control_w(uint16_t data)
 {
 	machine().bookkeeping().coin_counter_w(0, data & 1);
 	if (data & 0xfffe)
-		logerror("Coin cointrol %04x\n", data);
+		logerror("Coin control %04x\n", data);
 }
 
 /**********************************************************************************/
@@ -744,8 +742,8 @@ void dassault_state::dassault(machine_config &config)
 
 	H6280(config, m_audiocpu, XTAL(32'220'000) / 8); // Accurate
 	m_audiocpu->set_addrmap(AS_PROGRAM, &dassault_state::sound_map);
-	m_audiocpu->add_route(ALL_OUTPUTS, "lspeaker", 0); // internal sound unused
-	m_audiocpu->add_route(ALL_OUTPUTS, "rspeaker", 0);
+	m_audiocpu->add_route(ALL_OUTPUTS, "speaker", 0, 0); // internal sound unused
+	m_audiocpu->add_route(ALL_OUTPUTS, "speaker", 0, 1);
 
 	config.set_maximum_quantum(attotime::from_hz(m_maincpu->clock() / 4)); // I was seeing random lockups.. let's see if this helps
 
@@ -794,29 +792,28 @@ void dassault_state::dassault(machine_config &config)
 	DECO_SPRITE(config, m_sprgen[1], 0, m_palette, gfx_dassault_spr2);
 
 	// sound hardware
-	SPEAKER(config, "lspeaker").front_left();
-	SPEAKER(config, "rspeaker").front_right();
+	SPEAKER(config, "speaker", 2).front();
 
 	GENERIC_LATCH_8(config, m_soundlatch);
 	m_soundlatch->data_pending_callback().set_inputline(m_audiocpu, 0); // IRQ1
 
 	ym2203_device &ym1(YM2203(config, "ym1", XTAL(32'220'000) / 8));
-	ym1.add_route(ALL_OUTPUTS, "lspeaker", 0.40);
-	ym1.add_route(ALL_OUTPUTS, "rspeaker", 0.40);
+	ym1.add_route(ALL_OUTPUTS, "speaker", 0.40, 0);
+	ym1.add_route(ALL_OUTPUTS, "speaker", 0.40, 1);
 
 	ym2151_device &ym2(YM2151(config, "ym2", XTAL(32'220'000) / 9));
 	ym2.irq_handler().set_inputline(m_audiocpu, 1);
 	ym2.port_write_handler().set(FUNC(dassault_state::sound_bankswitch_w));
-	ym2.add_route(0, "lspeaker", 0.45);
-	ym2.add_route(1, "rspeaker", 0.45);
+	ym2.add_route(0, "speaker", 0.45, 0);
+	ym2.add_route(1, "speaker", 0.45, 1);
 
 	okim6295_device &oki1(OKIM6295(config, "oki1", XTAL(32'220'000) / 32, okim6295_device::PIN7_HIGH)); // verified
-	oki1.add_route(ALL_OUTPUTS, "lspeaker", 0.50);
-	oki1.add_route(ALL_OUTPUTS, "rspeaker", 0.50);
+	oki1.add_route(ALL_OUTPUTS, "speaker", 0.50, 0);
+	oki1.add_route(ALL_OUTPUTS, "speaker", 0.50, 1);
 
 	OKIM6295(config, m_oki2, XTAL(32'220'000) / 16, okim6295_device::PIN7_HIGH); // verified
-	m_oki2->add_route(ALL_OUTPUTS, "lspeaker", 0.25);
-	m_oki2->add_route(ALL_OUTPUTS, "rspeaker", 0.25);
+	m_oki2->add_route(ALL_OUTPUTS, "speaker", 0.25, 0);
+	m_oki2->add_route(ALL_OUTPUTS, "speaker", 0.25, 1);
 }
 
 /**********************************************************************************/

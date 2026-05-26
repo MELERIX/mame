@@ -19,6 +19,7 @@ public:
 	pc9821_state(const machine_config &mconfig, device_type type, const char *tag)
 		: pc9801bx_state(mconfig, type, tag)
 		, m_ext_gvram(*this, "ext_gvram")
+		, m_pegc_vram_view(*this, "pegc_vram_view")
 		, m_pegc_mmio_view(*this, "pegc_mmio_view")
 	{
 	}
@@ -37,6 +38,7 @@ protected:
 
 private:
 	required_shared_ptr<uint32_t> m_ext_gvram;
+	memory_view m_pegc_vram_view;
 	memory_view m_pegc_mmio_view;
 
 	uint16_t pc9821_grcg_gvram_r(offs_t offset, uint16_t mem_mask = ~0);
@@ -62,7 +64,19 @@ private:
 		uint8_t r[0x100]{}, g[0x100]{}, b[0x100]{};
 		uint16_t bank[2]{};
 		bool packed_mode = false;
-	}m_pegc;
+
+		uint8_t regs[0x100]{};
+		uint8_t lastdata[64]{};
+		uint8_t pattern[32]{};
+		uint32_t pattern_mask = 31;
+		int32_t lastdatalen = 0;
+		uint32_t remain = 0;
+
+		bool first_process_w = true;
+		bool first_process_r = true;
+		uint8_t shift_buffer[64]{};
+		uint32_t shift_cnt = 0;
+	} m_pegc;
 
 	void pc9821_egc_w(offs_t offset, u16 data, u16 mem_mask = ~0);
 	void pegc_mmio_map(address_map &map);
@@ -77,6 +91,7 @@ class pc9821_mate_a_state : public pc9821_state
 public:
 	pc9821_mate_a_state(const machine_config &mconfig, device_type type, const char *tag)
 		: pc9821_state(mconfig, type, tag)
+		, m_bios_view(*this, "bios_view")
 	{
 	}
 
@@ -84,10 +99,19 @@ public:
 	void pc9821ap2(machine_config &config);
 
 protected:
+	void pc9821as_map(address_map &map) ATTR_COLD;
+	void pc9821ap2_map(address_map &map) ATTR_COLD;
 	void pc9821as_io(address_map &map) ATTR_COLD;
+
+	virtual void itf_43d_bank_w(offs_t offset, uint8_t data) override;
+	virtual void cbus_43f_bank_w(offs_t offset, uint8_t data) override;
 
 private:
 	DECLARE_MACHINE_START(pc9821ap2);
+	DECLARE_MACHINE_RESET(pc9821ap2);
+
+	// Starting from Af
+	memory_view m_bios_view;
 
 	// Ap, As, Ae only
 	u8 ext_sdip_data_r(offs_t offset);
@@ -105,26 +129,32 @@ class pc9821_canbe_state : public pc9821_state
 public:
 	pc9821_canbe_state(const machine_config &mconfig, device_type type, const char *tag)
 		: pc9821_state(mconfig, type, tag)
+		, m_bios_view(*this, "bios_view")
 	{
 	}
 
-	void pc9821ce2(machine_config &config);
+	void pc9821ce(machine_config &config);
+//  void pc9821ce2(machine_config &config);
 	void pc9821cx3(machine_config &config);
 
 protected:
+	void pc9821ce_map(address_map &map) ATTR_COLD;
+	void pc9821ce_io(address_map &map) ATTR_COLD;
+
 	void pc9821cx3_map(address_map &map) ATTR_COLD;
 	void pc9821cx3_io(address_map &map) ATTR_COLD;
 
+	virtual void itf_43d_bank_w(offs_t offset, uint8_t data) override;
+	virtual void cbus_43f_bank_w(offs_t offset, uint8_t data) override;
+
 private:
-	void remote_addr_w(offs_t offset, u8 data);
-	u8 remote_data_r(offs_t offset);
-	void remote_data_w(offs_t offset, u8 data);
+	memory_view m_bios_view;
 
 	DECLARE_MACHINE_START(pc9821_canbe);
+	DECLARE_MACHINE_RESET(pc9821_canbe);
 
-	struct {
-		u8 index = 0;
-	}m_remote;
+	virtual void hole_15m_control_w(offs_t offset, u8 data) override;
+
 };
 
 // class pc9821_cereb_state : public pc9821_canbe_state
@@ -144,7 +174,8 @@ public:
 	}
 
 	void pc9821xa16(machine_config &config);
-	void pc9821xs(machine_config &config);
+	void pc9821xv13(machine_config &config);
+//  void pc9821xs(machine_config &config);
 };
 
 // Mate R
@@ -162,36 +193,49 @@ public:
 	void pc9821ra333(machine_config &config);
 };
 
-class pc9821_valuestar_state : public pc9821_mate_x_state
-{
-public:
-	pc9821_valuestar_state(const machine_config &mconfig, device_type type, const char *tag)
-		: pc9821_mate_x_state(mconfig, type, tag)
-	{
-	}
-
-	void pc9821v13(machine_config &config);
-	void pc9821v20(machine_config &config);
-};
+// VLSI Supercore594 (Wildcat) or Intel 430FX (Triton) PCI 2.0
+// V166 / V200 / V233 uses an Intel 430VX PCI 2.1
+// https://www.pc-9800.net/db_98/data/pc-9821v13.htm
+// https://www.pc-9800.net/db_98/data/pc-9821v20.htm
+//class pc9821_valuestar_state : public pc9821_mate_x_state
+//{
+//public:
+//  pc9821_valuestar_state(const machine_config &mconfig, device_type type, const char *tag)
+//      : pc9821_mate_x_state(mconfig, type, tag)
+//  {
+//  }
+//
+//  void pc9821v13(machine_config &config);
+//  void pc9821v20(machine_config &config);
+//};
 
 // 9821NOTE
 
-class pc9821_note_state : public pc9821_state
-{
-public:
-	pc9821_note_state(const machine_config &mconfig, device_type type, const char *tag)
-		: pc9821_state(mconfig, type, tag)
-	{
-	}
+// https://www.pc-9800.net/db_98/data/pc-9821ne.htm
+// https://www.pc-9800.net/db_98/data/pc-9821ne2.htm
+//class pc9821_note_state : public pc9821_state
+//{
+//public:
+//  pc9821_note_state(const machine_config &mconfig, device_type type, const char *tag)
+//      : pc9821_state(mconfig, type, tag)
+//      , m_pmc(*this, "pmc")
+//  {
+//  }
+//
+//  void pc9821ne(machine_config &config);
+//
+//protected:
+//  void pc9821ne_io(address_map &map) ATTR_COLD;
+//
+//private:
+//  required_device<redwood1_device> m_pmc;
+//};
 
-	void pc9821ne(machine_config &config);
-};
-
-class pc9821_note_lavie_state : public pc9821_note_state
+class pc9821_note_lavie_state : public pc9821_state
 {
 public:
 	pc9821_note_lavie_state(const machine_config &mconfig, device_type type, const char *tag)
-		: pc9821_note_state(mconfig, type, tag)
+		: pc9821_state(mconfig, type, tag)
 	{
 	}
 

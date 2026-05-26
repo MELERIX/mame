@@ -71,9 +71,13 @@ Dumped 06/15/2000
 
 
 #include "emu.h"
+
+#include "mahjong.h"
+
 #include "cpu/m68000/m68000.h"
 #include "video/bufsprite.h"
 #include "sound/setapcm.h"
+
 #include "emupal.h"
 #include "screen.h"
 #include "speaker.h"
@@ -98,7 +102,7 @@ public:
 		m_sprram(*this, "sprram")
 	{ }
 
-	void srmp6(machine_config &config);
+	void srmp6(machine_config &config) ATTR_COLD;
 
 protected:
 	virtual void machine_start() override ATTR_COLD;
@@ -350,15 +354,14 @@ void srmp6_state::input_select_w(u16 data)
 
 u16 srmp6_state::inputs_r()
 {
-	switch (m_input_select) // inputs
+	uint16_t ret = 0xffff;
+	for (unsigned i = 0; m_key_io.size() > i; ++i)
 	{
-		case 1<<0: return m_key_io[0]->read();
-		case 1<<1: return m_key_io[1]->read();
-		case 1<<2: return m_key_io[2]->read();
-		case 1<<3: return m_key_io[3]->read();
+		if (BIT(m_input_select, i))
+			ret &= m_key_io[i]->read();
 	}
 
-	return 0;
+	return ((ret << 1) | (ret >> 15)) & 0xffff;
 }
 
 
@@ -592,43 +595,24 @@ void srmp6_state::srmp6_map(address_map &map)
 ***************************************************************************/
 
 static INPUT_PORTS_START( srmp6 )
+	PORT_INCLUDE(mahjong_matrix_1p)
 
-	PORT_START("KEY0")
-	PORT_BIT( 0xfe01, IP_ACTIVE_LOW, IPT_UNUSED ) // explicitly discarded
-	PORT_BIT( 0x0002, IP_ACTIVE_LOW, IPT_MAHJONG_A )
-	PORT_BIT( 0x0004, IP_ACTIVE_LOW, IPT_MAHJONG_E )
-	PORT_BIT( 0x0008, IP_ACTIVE_LOW, IPT_MAHJONG_I )
-	PORT_BIT( 0x0010, IP_ACTIVE_LOW, IPT_MAHJONG_M )
-	PORT_BIT( 0x0020, IP_ACTIVE_LOW, IPT_MAHJONG_KAN )
-	PORT_BIT( 0x0040, IP_ACTIVE_LOW, IPT_START1 )
-	PORT_BIT( 0x0080, IP_ACTIVE_LOW, IPT_COIN1 ) PORT_IMPULSE(2)
-	PORT_SERVICE_NO_TOGGLE( 0x0100, IP_ACTIVE_LOW )
+	PORT_MODIFY("KEY0")
+	PORT_BIT( 0x0040, IP_ACTIVE_LOW, IPT_COIN1 ) PORT_IMPULSE(2)
+	PORT_SERVICE_NO_TOGGLE( 0x0080, IP_ACTIVE_LOW )
+	PORT_BIT( 0xff00, IP_ACTIVE_LOW, IPT_UNUSED ) // explicitly discarded
 
-	PORT_START("KEY1")
-	PORT_BIT( 0xfe41, IP_ACTIVE_LOW, IPT_UNUSED ) // explicitly discarded
-	PORT_BIT( 0x0002, IP_ACTIVE_LOW, IPT_MAHJONG_B )
-	PORT_BIT( 0x0004, IP_ACTIVE_LOW, IPT_MAHJONG_F )
-	PORT_BIT( 0x0008, IP_ACTIVE_LOW, IPT_MAHJONG_J )
-	PORT_BIT( 0x0010, IP_ACTIVE_LOW, IPT_MAHJONG_N )
-	PORT_BIT( 0x0020, IP_ACTIVE_LOW, IPT_MAHJONG_REACH )
-	PORT_BIT( 0x0180, IP_ACTIVE_LOW, IPT_UNUSED )
+	PORT_MODIFY("KEY1")
+	PORT_BIT( 0x00c0, IP_ACTIVE_LOW, IPT_UNUSED )
+	PORT_BIT( 0xff20, IP_ACTIVE_LOW, IPT_UNUSED ) // explicitly discarded
 
-	PORT_START("KEY2")
-	PORT_BIT( 0xfe41, IP_ACTIVE_LOW, IPT_UNUSED ) // explicitly discarded
-	PORT_BIT( 0x0002, IP_ACTIVE_LOW, IPT_MAHJONG_C )
-	PORT_BIT( 0x0004, IP_ACTIVE_LOW, IPT_MAHJONG_G )
-	PORT_BIT( 0x0008, IP_ACTIVE_LOW, IPT_MAHJONG_K )
-	PORT_BIT( 0x0010, IP_ACTIVE_LOW, IPT_MAHJONG_CHI )
-	PORT_BIT( 0x0020, IP_ACTIVE_LOW, IPT_MAHJONG_RON )
-	PORT_BIT( 0x0180, IP_ACTIVE_LOW, IPT_UNUSED )
+	PORT_MODIFY("KEY2")
+	PORT_BIT( 0x00c0, IP_ACTIVE_LOW, IPT_UNUSED )
+	PORT_BIT( 0xff20, IP_ACTIVE_LOW, IPT_UNUSED ) // explicitly discarded
 
-	PORT_START("KEY3")
-	PORT_BIT( 0xfe61, IP_ACTIVE_LOW, IPT_UNUSED ) // explicitly discarded
-	PORT_BIT( 0x0002, IP_ACTIVE_LOW, IPT_MAHJONG_D )
-	PORT_BIT( 0x0004, IP_ACTIVE_LOW, IPT_MAHJONG_H )
-	PORT_BIT( 0x0008, IP_ACTIVE_LOW, IPT_MAHJONG_L )
-	PORT_BIT( 0x0010, IP_ACTIVE_LOW, IPT_MAHJONG_PON )
-	PORT_BIT( 0x0180, IP_ACTIVE_LOW, IPT_UNUSED )
+	PORT_MODIFY("KEY3")
+	PORT_BIT( 0x00c0, IP_ACTIVE_LOW, IPT_UNUSED )
+	PORT_BIT( 0xff30, IP_ACTIVE_LOW, IPT_UNUSED ) // explicitly discarded
 
 	PORT_START("DSW")   // 16-bit DSW1 (0x0000) +DSW2 (0x0700)
 	PORT_DIPNAME( 0x0007, 0x0007, DEF_STR( Coinage ) )      PORT_DIPLOCATION("DSW1:1,2,3")
@@ -703,13 +687,12 @@ void srmp6_state::srmp6(machine_config &config)
 	BUFFERED_SPRITERAM16(config, m_sprram);
 
 	// sound hardware
-	SPEAKER(config, "lspeaker").front_left();
-	SPEAKER(config, "rspeaker").front_right();
+	SPEAKER(config, "speaker", 2).front();
 
 	// matches video, needs to verified; playback rate: (42.9545Mhz / 7) / 160 or (42.9545Mhz / 5) / 224 or (42.9545Mhz / 4) / 280?
 	nile_sound_device &nile(NILE_SOUND(config, "nile", XTAL(42'954'545) / 7));
-	nile.add_route(0, "lspeaker", 1.0);
-	nile.add_route(1, "rspeaker", 1.0);
+	nile.add_route(0, "speaker", 1.0, 0);
+	nile.add_route(1, "speaker", 1.0, 1);
 }
 
 

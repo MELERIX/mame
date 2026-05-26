@@ -42,8 +42,8 @@ After boot, it copies ROM to RAM, probably to circumvent waitstates on slow ROM.
 
 #include "emu.h"
 
-#include "mmboard.h"
-#include "mmdisplay2.h"
+#include "mboard.h"
+#include "mdisplay2.h"
 
 #include "cpu/m68000/m68030.h"
 #include "machine/nvram.h"
@@ -89,7 +89,7 @@ private:
 	u8 nvram_r(offs_t offset) { return m_nvram[offset]; }
 	void nvram_w(offs_t offset, u8 data) { m_nvram[offset] = data; }
 
-	TIMER_CALLBACK_MEMBER(disable_bootrom) { m_boot_view.select(1); }
+	TIMER_CALLBACK_MEMBER(disable_bootrom) { m_boot_view.disable(); }
 };
 
 
@@ -130,9 +130,9 @@ INPUT_CHANGED_MEMBER(mmtm_state::change_cpu_freq)
 
 void mmtm_state::mmtm_2m_map(address_map &map)
 {
+	map(0x00000000, 0x0003ffff).ram();
 	map(0x00000000, 0x0003ffff).view(m_boot_view);
 	m_boot_view[0](0x00000000, 0x0003ffff).rom().region("maincpu", 0);
-	m_boot_view[1](0x00000000, 0x0003ffff).ram();
 
 	map(0x80000000, 0x801fffff).ram();
 	map(0xf0000000, 0xf003ffff).rom().region("maincpu", 0);
@@ -280,5 +280,5 @@ SYST( 1991, van32t,    van32,  0,      mmtm_v,  mmtm_v, mmtm_state, empty_init, 
 SYST( 1991, van32t8,   van32,  0,      mmtm_t,  mmtm_t, mmtm_state, empty_init, "Hegener + Glaser", "Mephisto TM Vancouver", MACHINE_SUPPORTS_SAVE )
 SYST( 1991, berl32t8p, van32,  0,      mmtm_t,  mmtm_t, mmtm_state, empty_init, "Hegener + Glaser", "Mephisto TM Berlin (prototype)", MACHINE_SUPPORTS_SAVE )
 
-SYST( 1996, lond32t,   lond32, 0,      mmtm_v,  mmtm_v, mmtm_state, empty_init, "Saitek", "Mephisto London 68030", MACHINE_SUPPORTS_SAVE ) // after Saitek took over H+G
+SYST( 1996, lond32t,   lond32, 0,      mmtm_v,  mmtm_v, mmtm_state, empty_init, "Saitek", "Mephisto London 68030", MACHINE_SUPPORTS_SAVE ) // when H+G was a subsidiary of Saitek
 SYST( 1996, lond32t8,  lond32, 0,      mmtm_t,  mmtm_t, mmtm_state, empty_init, "Saitek", "Mephisto TM London", MACHINE_SUPPORTS_SAVE ) // "

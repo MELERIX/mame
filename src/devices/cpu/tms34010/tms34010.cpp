@@ -18,6 +18,8 @@
 
 #include "screen.h"
 
+#include <bit>
+
 #define LOG_CONTROL_REGS (1U << 1)
 #define LOG_GRAPHICS_OPS (1U << 2)
 
@@ -485,7 +487,7 @@ void tms340x0_device::write_pixel_16(offs_t offset, uint32_t data)
 void tms340x0_device::write_pixel_32(offs_t offset, uint32_t data)
 {
 	/* TODO: plane masking */
-	TMS34010_WRMEM_WORD(offset & 0xffffffe0, data);
+	TMS34010_WRMEM_DWORD(offset & 0xffffffe0, data);
 }
 
 /* No Raster Op + Transparency */
@@ -877,7 +879,7 @@ void tms340x0_device::execute_run()
 	/* check interrupts first */
 	m_executing = true;
 	check_interrupt();
-	if ((machine().debug_flags & DEBUG_FLAG_ENABLED) == 0)
+	if (!debugger_enabled())
 	{
 		do
 		{

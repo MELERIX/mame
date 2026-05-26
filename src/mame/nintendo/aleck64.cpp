@@ -1060,13 +1060,14 @@ void aleck64_state::aleck64(machine_config &config)
 
 	PALETTE(config, "palette").set_entries(0x1000);
 
-	SPEAKER(config, "lspeaker").front_left();
-	SPEAKER(config, "rspeaker").front_right();
+	SPEAKER(config, "speaker", 2).front();
 
-	DMADAC(config, "dac1").add_route(ALL_OUTPUTS, "lspeaker", 1.0);
-	DMADAC(config, "dac2").add_route(ALL_OUTPUTS, "rspeaker", 1.0);
+	DMADAC(config, "dac1").add_route(ALL_OUTPUTS, "speaker", 1.0, 0);
+	DMADAC(config, "dac2").add_route(ALL_OUTPUTS, "speaker", 1.0, 1);
 
 	N64PERIPH(config, m_rcp_periphs, 0);
+	m_rcp_periphs->set_sram(m_sram);
+	m_rcp_periphs->set_rdram(m_rdram);
 }
 
 uint32_t aleck64_state::screen_update_e90(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect)

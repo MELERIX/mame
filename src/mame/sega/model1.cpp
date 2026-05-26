@@ -602,7 +602,6 @@ Notes:
 #include "machine/nvram.h"
 #include "speaker.h"
 
-#include "vr.lh"
 #include "model1io2.lh"
 
 // On the real system, another 315-5338A is acting as slave
@@ -1078,7 +1077,7 @@ static INPUT_PORTS_START( swa )
 	PORT_BIT( 0xff, 0x7f, IPT_AD_STICK_X ) PORT_MINMAX(27,227) PORT_SENSITIVITY(100) PORT_KEYDELTA(4)  PORT_REVERSE
 
 	PORT_START("STICK1Y")
-	PORT_BIT( 0xff, 0x7f, IPT_AD_STICK_Y ) PORT_MINMAX(27,227) PORT_SENSITIVITY(100) PORT_KEYDELTA(4)  PORT_REVERSE
+	PORT_BIT( 0xff, 0x7f, IPT_AD_STICK_Y ) PORT_MINMAX(27,227) PORT_SENSITIVITY(100) PORT_KEYDELTA(4)
 
 	PORT_START("THROTTLE")
 	PORT_BIT( 0xff, 0x7f, IPT_PEDAL )      PORT_MINMAX(28,200) PORT_SENSITIVITY(100) PORT_KEYDELTA(16) PORT_REVERSE
@@ -1711,19 +1710,20 @@ ROM_END
 
 void model1_state::model1(machine_config &config)
 {
-	V60(config, m_maincpu, 16000000);
+	V60(config, m_maincpu, 32_MHz_XTAL / 2);
 	m_maincpu->set_addrmap(AS_PROGRAM, &model1_state::model1_mem);
 	m_maincpu->set_addrmap(AS_IO, &model1_state::model1_io);
 	m_maincpu->set_irq_acknowledge_callback(FUNC(model1_state::irq_callback));
 
-	NVRAM(config, "nvram", nvram_device::DEFAULT_ALL_0); // 2x MB84256A-70LL + battery
+	// vf (at least) depends on default being 1-filled for ranking to initialize properly
+	NVRAM(config, "nvram", nvram_device::DEFAULT_ALL_1); // 2x MB84256A-70LL + battery
 
 	GENERIC_FIFO_U32(config, "copro_fifo_in", 0);
 	GENERIC_FIFO_U32(config, "copro_fifo_out", 0);
 
 	TIMER(config, "scantimer").configure_scanline(FUNC(model1_state::model1_interrupt), "screen", 0, 1);
 
-	MB86233(config, m_tgp_copro, 16000000);
+	MB86233(config, m_tgp_copro, 40_MHz_XTAL);
 	m_tgp_copro->set_addrmap(AS_PROGRAM, &model1_state::copro_prog_map);
 	m_tgp_copro->set_addrmap(AS_DATA, &model1_state::copro_data_map);
 	m_tgp_copro->set_addrmap(AS_IO, &model1_state::copro_io_map);
@@ -1818,11 +1818,10 @@ void model1_state::swa(machine_config &config)
 	ioboard.output_callback().set(FUNC(model1_state::swa_outputs_w));
 	ioboard.output_callback().append(FUNC(model1_state::gen_outputs_w));
 
-	SPEAKER(config, "dleft").front_left();
-	SPEAKER(config, "dright").front_right();
+	SPEAKER(config, "mpeg", 2).front();
 	DSBZ80(config, m_dsbz80, 0);
-	m_dsbz80->add_route(0, "dleft", 1.0);
-	m_dsbz80->add_route(1, "dright", 1.0);
+	m_dsbz80->add_route(0, "mpeg", 1.0, 0);
+	m_dsbz80->add_route(1, "mpeg", 1.0, 1);
 
 	// Apparently m1audio has to filter out commands the DSB shouldn't see
 	m_m1audio->rxd_handler().append(m_dsbz80, FUNC(dsbz80_device::write_txd));

@@ -10,7 +10,7 @@
 #include "imagedev/floppy.h"
 #include "machine/nscsi_bus.h"
 #include "machine/mccs1850.h"
-#include "machine/8530scc.h"
+#include "machine/z80scc.h"
 #include "nextkbd.h"
 #include "machine/upd765.h"
 #include "machine/ncr53c90.h"
@@ -29,7 +29,7 @@ public:
 			scc(*this, "scc"),
 			keyboard(*this, "keyboard"),
 			scsibus(*this, "scsibus"),
-			scsi(*this, "scsibus:7:ncr53c90"),
+			scsi(*this, "ncr53c90"),
 			net(*this, "net"),
 			mo(*this, "mo"),
 			fdc(*this, "fdc"),
@@ -65,7 +65,7 @@ public:
 private:
 	required_device<cpu_device> maincpu;
 	required_device<mccs1850_device> rtc;
-	required_device<scc8530_legacy_device> scc;
+	required_device<scc8530_device> scc;
 	required_device<nextkbd_device> keyboard;
 	required_device<nscsi_bus_device> scsibus;
 	required_device<ncr53c90_device> scsi;
@@ -146,7 +146,6 @@ private:
 
 	void vblank_w(int state);
 
-	void ncr53c90(device_t *device);
 	void next_0b_m_mem(address_map &map) ATTR_COLD;
 	void next_0b_m_mo_mem(address_map &map) ATTR_COLD;
 	void next_0b_m_nofdc_mem(address_map &map) ATTR_COLD;

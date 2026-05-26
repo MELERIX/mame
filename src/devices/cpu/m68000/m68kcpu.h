@@ -8,7 +8,7 @@
  *                                Version 4.50
  *
  * A portable Motorola M680x0 processor emulation engine.
- * Copyright Karl Stenerud.  All rights reserved.
+ * Copyright Karl Stenerud
  *
  */
 
@@ -215,19 +215,19 @@ inline u32 &REG_SP()          { return m_dar[15]; }
 /* Disable certain comparisons if we're not using all CPU types */
 inline u32 CPU_TYPE_IS_COLDFIRE() const    { return ((m_cpu_type) & (CPU_TYPE_COLDFIRE)); }
 
-inline u32 CPU_TYPE_IS_040_PLUS() const    { return ((m_cpu_type) & (CPU_TYPE_040 | CPU_TYPE_EC040)); }
+inline u32 CPU_TYPE_IS_040_PLUS() const    { return ((m_cpu_type) & (CPU_TYPE_040 | CPU_TYPE_EC040 | CPU_TYPE_LC040)); }
 
-inline u32 CPU_TYPE_IS_030_PLUS() const    { return ((m_cpu_type) & (CPU_TYPE_030 | CPU_TYPE_EC030 | CPU_TYPE_040 | CPU_TYPE_EC040)); }
+inline u32 CPU_TYPE_IS_030_PLUS() const    { return ((m_cpu_type) & (CPU_TYPE_030 | CPU_TYPE_EC030 | CPU_TYPE_040 | CPU_TYPE_EC040 | CPU_TYPE_EC040 | CPU_TYPE_LC040)); }
 
-inline u32 CPU_TYPE_IS_020_PLUS() const    { return ((m_cpu_type) & (CPU_TYPE_020 | CPU_TYPE_030 | CPU_TYPE_EC030 | CPU_TYPE_040 | CPU_TYPE_EC040 | CPU_TYPE_FSCPU32 | CPU_TYPE_COLDFIRE)); }
+inline u32 CPU_TYPE_IS_020_PLUS() const    { return ((m_cpu_type) & (CPU_TYPE_020 | CPU_TYPE_030 | CPU_TYPE_EC030 | CPU_TYPE_040 | CPU_TYPE_EC040 | CPU_TYPE_LC040 | CPU_TYPE_FSCPU32 | CPU_TYPE_COLDFIRE)); }
 
 inline u32 CPU_TYPE_IS_020_VARIANT() const { return ((m_cpu_type) & (CPU_TYPE_EC020 | CPU_TYPE_020 | CPU_TYPE_FSCPU32)); }
 
-inline u32 CPU_TYPE_IS_EC020_PLUS() const  { return ((m_cpu_type) & (CPU_TYPE_EC020 | CPU_TYPE_020 | CPU_TYPE_030 | CPU_TYPE_EC030 | CPU_TYPE_040 | CPU_TYPE_EC040 | CPU_TYPE_FSCPU32 | CPU_TYPE_COLDFIRE)); }
+inline u32 CPU_TYPE_IS_EC020_PLUS() const  { return ((m_cpu_type) & (CPU_TYPE_EC020 | CPU_TYPE_020 | CPU_TYPE_030 | CPU_TYPE_EC030 | CPU_TYPE_040 | CPU_TYPE_EC040 | CPU_TYPE_LC040 | CPU_TYPE_FSCPU32 | CPU_TYPE_COLDFIRE)); }
 inline u32 CPU_TYPE_IS_EC020_LESS() const  { return ((m_cpu_type) & (CPU_TYPE_000 | CPU_TYPE_008 | CPU_TYPE_010 | CPU_TYPE_EC020)); }
 
 inline u32 CPU_TYPE_IS_010() const         { return ((m_cpu_type) == CPU_TYPE_010); }
-inline u32 CPU_TYPE_IS_010_PLUS() const    { return ((m_cpu_type) & (CPU_TYPE_010 | CPU_TYPE_EC020 | CPU_TYPE_020 | CPU_TYPE_EC030 | CPU_TYPE_030 | CPU_TYPE_040 | CPU_TYPE_EC040 | CPU_TYPE_FSCPU32 | CPU_TYPE_COLDFIRE)); }
+inline u32 CPU_TYPE_IS_010_PLUS() const    { return ((m_cpu_type) & (CPU_TYPE_010 | CPU_TYPE_EC020 | CPU_TYPE_020 | CPU_TYPE_EC030 | CPU_TYPE_030 | CPU_TYPE_040 | CPU_TYPE_EC040 | CPU_TYPE_LC040 | CPU_TYPE_FSCPU32 | CPU_TYPE_COLDFIRE)); }
 inline u32 CPU_TYPE_IS_010_LESS() const    { return ((m_cpu_type) & (CPU_TYPE_000 | CPU_TYPE_008 | CPU_TYPE_010 | CPU_TYPE_SCC070)); }
 
 inline u32 CPU_TYPE_IS_000() const         { return ((m_cpu_type) == CPU_TYPE_000 || (m_cpu_type) == CPU_TYPE_008); }
@@ -604,11 +604,14 @@ inline u32 m68ki_read_imm_16()
 	result = MASK_OUT_ABOVE_16(m_pref_data);
 	m_pc += 2;
 	if (!m_mmu_tmp_buserror_occurred) {
+
 		// prefetch only if no bus error occurred in opcode fetch
 		m_pref_data = m68ki_ic_readimm16(m_pc);
 		m_pref_addr = m_mmu_tmp_buserror_occurred ? ~0 : m_pc;
-		// ignore bus error on prefetch
-		m_mmu_tmp_buserror_occurred = 0;
+		if (!CPU_TYPE_IS_010())
+		{
+			m_mmu_tmp_buserror_occurred = 0;
+		}
 	}
 
 	return result;

@@ -2,7 +2,7 @@
 // copyright-holders: Felipe Sanches
 /***************************************************************************
 
-  SONY PVE-500 Editing Control Unit
+  Sony PVE-500 Editing Control Unit
   "A/B roll edit controller for professional video editing applications"
 
   Driver by Felipe Correa da Silva Sanches <juca@members.fsf.org>
@@ -409,7 +409,8 @@ void pve500_state::pve500(machine_config &config)
 	/* The EEPROM stores the setup data */
 	EEPROM_MSM16911_8BIT(config, "eeprom");
 
-	/* FIX-ME: These are actually RS422 ports (except EDL IN/OUT which is indeed an RS232 port)*/
+	// FIXME: These are actually RS422 ports
+	// (except EDL IN/OUT which is indeed an RS232 port)
 	rs232_port_device &recorder(RS232_PORT(config, "recorder", default_rs232_devices, nullptr));
 	recorder.rxd_handler().set(m_maincpu, FUNC(tmpz84c015_device::rxa_w));
 
@@ -472,4 +473,4 @@ ROM_END
 
 
 //    YEAR  NAME    PARENT  COMPAT  MACHINE  INPUT   CLASS         INIT         COMPANY  FULLNAME   FLAGS
-COMP( 1995, pve500, 0,      0,      pve500,  pve500, pve500_state, init_pve500, "SONY",  "PVE-500", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_GRAPHICS)
+COMP( 1995, pve500, 0,      0,      pve500,  pve500, pve500_state, init_pve500, "Sony",  "PVE-500", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_GRAPHICS)

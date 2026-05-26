@@ -81,7 +81,7 @@ diags>
 #include "imagedev/harddriv.h"
 
 // graphics
-#include "cpu/mcs51/mcs51.h"
+#include "cpu/mcs51/i8051.h"
 #include "video/mc6845.h"
 #include "screen.h"
 
@@ -228,7 +228,7 @@ public:
 	tek4132_state(machine_config const &mconfig, device_type type, char const *tag)
 		: tekigw_state_base(mconfig, type, tag)
 		, m_scsibus(*this, "scsi")
-		, m_scsi(*this, "scsi:7:ncr5385")
+		, m_scsi(*this, "ncr5385")
 		, m_sdma(*this, "sdma")
 		, m_sirq(*this, "sirq")
 	{
@@ -752,7 +752,7 @@ void tekigw_state_base::common_config(machine_config &config)
 	RAM(config, m_ram);
 	m_ram->set_default_size("1M");
 
-	SCC8530N(config, m_scc, 16_MHz_XTAL / 4);
+	SCC8530(config, m_scc, 16_MHz_XTAL / 4);
 	m_scc->out_int_callback().set(m_icu, FUNC(ns32202_device::ir_w<1>)).invert();
 	m_scc->configure_channels(2'457'600, 0, 2'457'600, 0);
 
@@ -958,19 +958,14 @@ void tek4132_state::tek4132(machine_config &config)
 	NSCSI_CONNECTOR(config, "scsi:4", scsi_devices, nullptr);
 	NSCSI_CONNECTOR(config, "scsi:5", scsi_devices, nullptr);
 	NSCSI_CONNECTOR(config, "scsi:6", scsi_devices, nullptr);
-	NSCSI_CONNECTOR(config, "scsi:7").option_set("ncr5385", NCR5385).clock(10'000'000).machine_config(
-		[this](device_t *device)
-		{
-			ncr5385_device &adapter = downcast<ncr5385_device &>(*device);
 
-			//adapter.irq().set(m_sirq, FUNC(input_merger_all_high_device::in_w<1>));
-			adapter.irq().set(m_icu, FUNC(ns32202_device::ir_w<4>));
-			adapter.dreq().set(m_dma, FUNC(am9516_device::dreq_w<0>)).invert();
+	NCR5385(config, m_scsi, 10'000'000);
+	m_scsibus->set_external_device(7, m_scsi);
+	m_scsi->irq().set(m_icu, FUNC(ns32202_device::ir_w<4>));
+	m_scsi->dreq().set(m_dma, FUNC(am9516_device::dreq_w<0>)).invert();
 
-		});
-
-	m_dma->flyby_byte_r<0>().set(":scsi:7:ncr5385", FUNC(ncr5385_device::dma_r));
-	m_dma->flyby_byte_w<0>().set(":scsi:7:ncr5385", FUNC(ncr5385_device::dma_w));
+	m_dma->flyby_byte_r<0>().set("ncr5385", FUNC(ncr5385_device::dma_r));
+	m_dma->flyby_byte_w<0>().set("ncr5385", FUNC(ncr5385_device::dma_w));
 }
 
 static INPUT_PORTS_START(tekigw)

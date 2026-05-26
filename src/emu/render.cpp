@@ -1273,12 +1273,14 @@ void render_target::update_pointer_fields()
 	}
 
 	// update item hit states
+	std::vector<u64> prev_hit(m_clickable_items.size());
 	u64 obscured(0U);
 	for (size_t i = 0; m_clickable_items.size() > i; ++i)
 	{
 		layout_view_item const &item(current_view().interactive_items()[i]);
 		u64 const inbounds(m_clickable_items[i].inbounds.first & m_clickable_items[i].inbounds.second);
 		u64 hit(m_clickable_items[i].hit);
+		prev_hit[i] = hit;
 		for (unsigned ptr = 0; m_pointers.size() > ptr; ++ptr)
 		{
 			pointer_info const &pointer(m_pointers[ptr]);
@@ -1294,21 +1296,28 @@ void render_target::update_pointer_fields()
 					obscured |= u64(1) << ptr;
 			}
 		}
+		m_clickable_items[i].hit = hit;
+	}
 
-		// update field state
-		if (bool(hit) != bool(m_clickable_items[i].hit))
+	// update field state
+	for (int state = 0; 2 > state; ++state)
+	{
+		for (size_t i = 0; m_clickable_items.size() > i; ++i)
 		{
-			auto const [port, mask] = item.input_tag_and_mask();
-			ioport_field *const field(port ? port->field(mask) : nullptr);
-			if (field)
+			if (bool(state) != bool(prev_hit[i]) && bool(state) == bool(m_clickable_items[i].hit))
 			{
-				if (hit)
-					field->set_value(1);
-				else
-					field->clear_value();
+				layout_view_item const &item(current_view().interactive_items()[i]);
+				auto const [port, mask] = item.input_tag_and_mask();
+				ioport_field *const field(port ? port->field(mask) : nullptr);
+				if (field)
+				{
+					if (state)
+						field->set_value(1);
+					else
+						field->clear_value();
+				}
 			}
 		}
-		m_clickable_items[i].hit = hit;
 	}
 }
 
@@ -3434,66 +3443,51 @@ render_target *render_manager::target_by_index(int index) const
 //  fonts
 //-------------------------------------------------
 
-float render_manager::ui_aspect(render_container *rc)
+float render_manager::ui_aspect(render_target &target)
 {
-	// work out if this is a UI container
-	render_target *target = nullptr;
-	if (!rc)
-	{
-		target = &ui_target();
-		rc = target->ui_container();
-		assert(rc);
-	}
-	else
-	{
-		for (render_target &t : m_targetlist)
-		{
-			if (t.ui_container() == rc)
-			{
-				target = &t;
-				break;
-			}
-		}
-	}
+	assert(target.ui_container());
 
+	// based on the orientation of the target, compute height/width or width/height
+	int const orient = orientation_add(target.orientation(), target.ui_container()->orientation());
 	float aspect;
-
-	if (target)
-	{
-		// UI container, aggregated multi-screen target
-
-		// based on the orientation of the target, compute height/width or width/height
-		int const orient = orientation_add(target->orientation(), rc->orientation());
-		if (!(orient & ORIENTATION_SWAP_XY))
-			aspect = float(target->height()) / float(target->width());
-		else
-			aspect = float(target->width()) / float(target->height());
-
-		// if we have a valid pixel aspect, apply that and return
-		if (target->pixel_aspect() != 0.0f)
-		{
-			float pixel_aspect = target->pixel_aspect();
-
-			if (orient & ORIENTATION_SWAP_XY)
-				pixel_aspect = 1.0f / pixel_aspect;
-
-			return aspect /= pixel_aspect;
-		}
-	}
+	if (!(orient & ORIENTATION_SWAP_XY))
+		aspect = float(target.height()) / float(target.width());
 	else
-	{
-		// single screen container
+		aspect = float(target.width()) / float(target.height());
 
-		// based on the orientation of the target, compute height/width or width/height
-		int const orient = rc->orientation();
-		if (!(orient & ORIENTATION_SWAP_XY))
-			aspect = (float)rc->screen()->visible_area().height() / (float)rc->screen()->visible_area().width();
-		else
-			aspect = (float)rc->screen()->visible_area().width() / (float)rc->screen()->visible_area().height();
+	// if we have a valid pixel aspect, apply that and return
+	if (target.pixel_aspect() != 0.0F)
+	{
+		float pixel_aspect = target.pixel_aspect();
+
+		if (orient & ORIENTATION_SWAP_XY)
+			pixel_aspect = 1.0F / pixel_aspect;
+
+		return aspect / pixel_aspect;
 	}
 
 	// clamp for extreme proportions
-	return std::clamp(aspect, 0.66f, 1.5f);
+	return std::clamp(aspect, 0.66F, 1.5F);
+}
+
+float render_manager::ui_aspect(render_container &rc)
+{
+	// deal with UI containers
+	for (render_target &target : m_targetlist)
+	{
+		if (target.ui_container() == &rc)
+			return ui_aspect(target);
+	}
+
+	// based on the orientation of the target, compute height/width or width/height
+	assert(rc.screen());
+	int const orient = rc.orientation();
+	float const viswidth = rc.screen()->visible_area().width();
+	float const visheight = rc.screen()->visible_area().height();
+	float const aspect = !(orient & ORIENTATION_SWAP_XY) ? (visheight / viswidth) : (viswidth / visheight);
+
+	// clamp for extreme proportions
+	return std::clamp(aspect, 0.66F, 1.5F);
 }
 
 

@@ -443,7 +443,7 @@ void skykid_state::main_map(address_map &map)
 	map(0x4800, 0x5fff).ram().share(m_spriteram);
 	map(0x6000, 0x60ff).w(FUNC(skykid_state::scroll_y_w));
 	map(0x6200, 0x63ff).w(FUNC(skykid_state::scroll_x_w));
-	map(0x6800, 0x6bff).rw(m_cus30, FUNC(namco_cus30_device::namcos1_cus30_r), FUNC(namco_cus30_device::namcos1_cus30_w)); // PSG device, shared RAM
+	map(0x6800, 0x6bff).m(m_cus30, FUNC(namco_cus30_device::amap)); // PSG device, shared RAM
 	map(0x7000, 0x7fff).w(FUNC(skykid_state::irq_1_ctrl_w));
 	map(0x7800, 0x7fff).r("watchdog", FUNC(watchdog_timer_device::reset_r));
 	map(0x8000, 0xffff).rom();
@@ -454,7 +454,7 @@ void skykid_state::main_map(address_map &map)
 
 void skykid_state::mcu_map(address_map &map)
 {
-	map(0x1000, 0x13ff).rw(m_cus30, FUNC(namco_cus30_device::namcos1_cus30_r), FUNC(namco_cus30_device::namcos1_cus30_w)); // PSG device, shared RAM
+	map(0x1000, 0x13ff).m(m_cus30, FUNC(namco_cus30_device::amap)); // PSG device, shared RAM
 	map(0x2000, 0x3fff).w("watchdog", FUNC(watchdog_timer_device::reset_w)); // ?
 	map(0x4000, 0x7fff).w(FUNC(skykid_state::irq_2_ctrl_w));
 	map(0x8000, 0x9fff).rom().region("mcusub", 0);
@@ -578,9 +578,9 @@ static INPUT_PORTS_START( drgnbstr )
 	PORT_SERVICE_DIPLOC( 0x80, IP_ACTIVE_LOW, "SWA:1" )
 
 	PORT_START("DSWB")
-	PORT_DIPNAME( 0x01, 0x01, DEF_STR( Allow_Continue ) ) PORT_DIPLOCATION("SWB:8") // Does not work?
-	PORT_DIPSETTING(    0x01, DEF_STR( No ) )
-	PORT_DIPSETTING(    0x00, DEF_STR( Yes ) )
+	PORT_DIPNAME( 0x01, 0x01, DEF_STR( Allow_Continue ) ) PORT_DIPLOCATION("SWB:8") // When vitality is under 32
+	PORT_DIPSETTING(    0x00, DEF_STR( No ) )
+	PORT_DIPSETTING(    0x01, DEF_STR( Yes ) )
 	PORT_DIPNAME( 0x02, 0x02, "Bonus Level" )          PORT_DIPLOCATION("SWB:7") // Clear Round
 	PORT_DIPSETTING(    0x00, "Partial" )
 	PORT_DIPSETTING(    0x02, "Full" )
@@ -723,7 +723,6 @@ void skykid_state::skykid(machine_config &config)
 	SPEAKER(config, "mono").front_center();
 
 	NAMCO_CUS30(config, m_cus30, 49152000 / 2048);
-	m_cus30->set_voices(8);
 	m_cus30->add_route(ALL_OUTPUTS, "mono", 1.0);
 }
 

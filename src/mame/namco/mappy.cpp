@@ -644,7 +644,7 @@ void mappy_state::superpac_main_map(address_map &map)
 	map(0x0000, 0x07ff).ram().w(FUNC(mappy_state::superpac_videoram_w)).share(m_videoram);
 	map(0x0800, 0x1fff).ram().share(m_spriteram);   // work RAM with embedded sprite RAM
 	map(0x2000, 0x2000).rw(FUNC(mappy_state::flipscreen_r), FUNC(mappy_state::flipscreen_w));
-	map(0x4000, 0x43ff).rw(m_namco_15xx, FUNC(namco_15xx_device::sharedram_r), FUNC(namco_15xx_device::sharedram_w));   // shared RAM with the sound CPU
+	map(0x4000, 0x43ff).m(m_namco_15xx, FUNC(namco_15xx_device::amap));   // shared RAM with the sound CPU
 	map(0x4800, 0x480f).rw(m_namcoio[0], FUNC(namcoio_device::read), FUNC(namcoio_device::write));   // custom I/O chips interface
 	map(0x4810, 0x481f).rw(m_namcoio[1], FUNC(namcoio_device::read), FUNC(namcoio_device::write));   // custom I/O chips interface
 	map(0x5000, 0x500f).w("mainlatch", FUNC(ls259_device::write_a0));   // various control bits
@@ -656,7 +656,7 @@ void phozon_state::main_map(address_map &map)
 {
 	map(0x0000, 0x07ff).ram().w(FUNC(phozon_state::superpac_videoram_w)).share(m_videoram);  // video RAM
 	map(0x0800, 0x1fff).ram().share(m_spriteram);   // shared RAM with CPU #2/sprite RAM
-	map(0x4000, 0x43ff).rw(m_namco_15xx, FUNC(namco_15xx_device::sharedram_r), FUNC(namco_15xx_device::sharedram_w));   // shared RAM with the sound CPU
+	map(0x4000, 0x43ff).m(m_namco_15xx, FUNC(namco_15xx_device::amap));   // shared RAM with the sound CPU
 	map(0x4800, 0x480f).rw(m_namcoio[0], FUNC(namcoio_device::read), FUNC(namcoio_device::write));   // custom I/O chips interface
 	map(0x4810, 0x481f).rw(m_namcoio[1], FUNC(namcoio_device::read), FUNC(namcoio_device::write));   // custom I/O chips interface
 	map(0x5000, 0x500f).w("mainlatch", FUNC(ls259_device::write_a0));   // various control bits
@@ -669,7 +669,7 @@ void mappy_state::mappy_main_map(address_map &map)
 	map(0x0000, 0x0fff).ram().w(FUNC(mappy_state::mappy_videoram_w)).share(m_videoram);
 	map(0x1000, 0x27ff).ram().share(m_spriteram);   // work RAM with embedded sprite RAM
 	map(0x3800, 0x3fff).w(FUNC(mappy_state::mappy_scroll_w));   // scroll
-	map(0x4000, 0x43ff).rw(m_namco_15xx, FUNC(namco_15xx_device::sharedram_r), FUNC(namco_15xx_device::sharedram_w));   // shared RAM with the sound CPU
+	map(0x4000, 0x43ff).m(m_namco_15xx, FUNC(namco_15xx_device::amap));   // shared RAM with the sound CPU
 	map(0x4800, 0x480f).rw(m_namcoio[0], FUNC(namcoio_device::read), FUNC(namcoio_device::write));   // custom I/O chips interface
 	map(0x4810, 0x481f).rw(m_namcoio[1], FUNC(namcoio_device::read), FUNC(namcoio_device::write));   // custom I/O chips interface
 	map(0x5000, 0x500f).w("mainlatch", FUNC(ls259_device::write_a0));   // various control bits
@@ -679,14 +679,14 @@ void mappy_state::mappy_main_map(address_map &map)
 
 void mappy_state::superpac_sub_map(address_map &map)
 {
-	map(0x0000, 0x03ff).rw(m_namco_15xx, FUNC(namco_15xx_device::sharedram_r), FUNC(namco_15xx_device::sharedram_w));   // shared RAM with the main CPU (also sound registers)
+	map(0x0000, 0x03ff).m(m_namco_15xx, FUNC(namco_15xx_device::amap));   // shared RAM with the main CPU (also sound registers)
 	map(0x2000, 0x200f).w("mainlatch", FUNC(ls259_device::write_a0));   // various control bits
 	map(0xe000, 0xffff).rom();
 }
 
 void phozon_state::sub_map(address_map &map)
 {
-	map(0x0000, 0x03ff).rw(m_namco_15xx, FUNC(namco_15xx_device::sharedram_r), FUNC(namco_15xx_device::sharedram_w));   // shared RAM with the main CPU + sound registers
+	map(0x0000, 0x03ff).m(m_namco_15xx, FUNC(namco_15xx_device::amap));   // shared RAM with the main CPU + sound registers
 	map(0xe000, 0xffff).rom();
 }
 
@@ -696,7 +696,7 @@ void phozon_state::sub2_map(address_map &map)
 {
 	map(0x0000, 0x07ff).ram().w(FUNC(phozon_state::superpac_videoram_w)).share(m_videoram);
 	map(0x0800, 0x1fff).ram().share(m_spriteram);   // shared RAM with CPU #2/sprite RAM
-	map(0x4000, 0x43ff).rw(m_namco_15xx, FUNC(namco_15xx_device::sharedram_r), FUNC(namco_15xx_device::sharedram_w));   // shared RAM with CPU #2
+	map(0x4000, 0x43ff).m(m_namco_15xx, FUNC(namco_15xx_device::amap));   // shared RAM with CPU #2
 	map(0xa000, 0xa7ff).ram();
 	map(0xe000, 0xffff).rom();
 }
@@ -839,7 +839,7 @@ static INPUT_PORTS_START( pacnpal )
 	PORT_DIPSETTING(    0x00, "30k Only" )                  PORT_CONDITION("DSW1",0xc0,NOTEQUALS,0x00)
 	PORT_DIPSETTING(    0x18, "30k & 70k Only" )            PORT_CONDITION("DSW1",0xc0,NOTEQUALS,0x00)
 	PORT_DIPSETTING(    0x10, "30k & 80k Only" )            PORT_CONDITION("DSW1",0xc0,NOTEQUALS,0x00)
-	PORT_DIPSETTING(    0x28, "30k, 100k & Every 80k" )     PORT_CONDITION("DSW1",0xc0,NOTEQUALS,0x00)
+	PORT_DIPSETTING(    0x28, "30k, 80k & Every 80k" )      PORT_CONDITION("DSW1",0xc0,NOTEQUALS,0x00)
 	PORT_DIPSETTING(    0x08, "30k & 100k Only" )           PORT_CONDITION("DSW1",0xc0,NOTEQUALS,0x00)
 	PORT_DIPSETTING(    0x08, "30k Only" )                  PORT_CONDITION("DSW1",0xc0,EQUALS,0x00)
 	PORT_DIPSETTING(    0x00, "40k Only" )                  PORT_CONDITION("DSW1",0xc0,EQUALS,0x00)
@@ -1356,7 +1356,6 @@ void mappy_state::superpac_common(machine_config &config)
 	SPEAKER(config, "speaker").front_center();
 
 	NAMCO_15XX(config, m_namco_15xx, MASTER_CLOCK/768);
-	m_namco_15xx->set_voices(8);
 	m_namco_15xx->add_route(ALL_OUTPUTS, "speaker", 1.0);
 }
 
@@ -1472,7 +1471,6 @@ void phozon_state::phozon(machine_config &config)
 	SPEAKER(config, "speaker").front_center();
 
 	NAMCO_15XX(config, m_namco_15xx, MASTER_CLOCK/768);
-	m_namco_15xx->set_voices(8);
 	m_namco_15xx->add_route(ALL_OUTPUTS, "speaker", 1.0);
 }
 
@@ -1518,7 +1516,6 @@ void mappy_state::mappy_common(machine_config &config)
 	SPEAKER(config, "speaker").front_center();
 
 	NAMCO_15XX(config, m_namco_15xx, MASTER_CLOCK/768);
-	m_namco_15xx->set_voices(8);
 	m_namco_15xx->add_route(ALL_OUTPUTS, "speaker", 1.0);
 }
 
@@ -1784,7 +1781,7 @@ ROM_START( grobda3 )
 	ROM_LOAD( "gr1-3.3m",  0x0000, 0x0100, CRC(66eb1467) SHA1(02b99ced4afd9ac139f634739769f7bf353274f9) )
 ROM_END
 
-ROM_START( phozon )
+ROM_START( phozon ) // 22139611 PCB
 	ROM_REGION( 0x10000, "maincpu", 0 ) // 64k for code for the MAIN CPU
 	ROM_LOAD( "6e.rom", 0x8000, 0x2000, CRC(a6686af1) SHA1(87a948b289356675d0418c87c3c0ae36ceba3ee0) )
 	ROM_LOAD( "6h.rom", 0xa000, 0x2000, CRC(72a65ba0) SHA1(b1d5146c009469d4c6695f08ea2c6ad5d05b5b9b) )
@@ -1814,6 +1811,11 @@ ROM_START( phozon )
 
 	ROM_REGION( 0x0100, "namco", 0 )    // sound PROMs
 	ROM_LOAD( "sound.prm", 0x0000, 0x0100, CRC(ad43688f) SHA1(072f427453efb1dda8147da61804fff06e1bc4d5) )
+
+	ROM_REGION( 0x600, "plds", ROMREGION_ERASE00 ) // bruteforced, target device is GAL16V8
+	ROM_LOAD( "ph1-7.7b", 0x000, 0x117, CRC(9a00af9a) SHA1(b5d5a3d8a091e0e3d62b2cce34ae9b8dc1cfcbff) )
+	ROM_LOAD( "ph1-8.4b", 0x200, 0x117, CRC(fb180f00) SHA1(c0a355fb5287e715b0c39b78eacfdcd00db953b1) )
+	ROM_LOAD( "ph1-9.7r", 0x400, 0x117, CRC(3b21d560) SHA1(905f9a6b7440b2eeb34475879751748300b42428) )
 ROM_END
 
 ROM_START( phozons )
@@ -1846,7 +1848,7 @@ ROM_START( phozons )
 	ROM_REGION( 0x0100, "namco", 0 )    // sound PROMs
 	ROM_LOAD( "ph1-4.3e", 0x0000, 0x0100, CRC(ad43688f) SHA1(072f427453efb1dda8147da61804fff06e1bc4d5) )
 
-	ROM_REGION( 0x0600, "plds", ROMREGION_ERASE00 )
+	ROM_REGION( 0x0600, "plds", ROMREGION_ERASE00 ) // bruteforced, target device is GAL16V8
 	ROM_LOAD( "ph1-7.7b", 0x0000, 0x0117, CRC(9a00af9a) SHA1(b5d5a3d8a091e0e3d62b2cce34ae9b8dc1cfcbff) )
 	ROM_LOAD( "ph1-8.4b", 0x0200, 0x0117, CRC(fb180f00) SHA1(c0a355fb5287e715b0c39b78eacfdcd00db953b1) )
 	ROM_LOAD( "ph1-9.7r", 0x0400, 0x0117, CRC(3b21d560) SHA1(905f9a6b7440b2eeb34475879751748300b42428) )

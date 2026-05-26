@@ -60,11 +60,11 @@ authors:hap
 			<color red="0.01" green="0.01" blue="0.01" />
 		</rect>
 		<rect>
-			<bounds xc="0" yc="0" width="1.84" height="0.92" />
+			<bounds xc="0" yc="0" width="1.92" height="0.92" />
 			<color red="0.5" green="0.5" blue="0.5" />
 		</rect>
 		<rect state="1">
-			<bounds xc="0" yc="0" width="1.84" height="0.92" />
+			<bounds xc="0" yc="0" width="1.92" height="0.92" />
 			<color red="1" green="1" blue="1" alpha="0.22" />
 		</rect>
 	</element>
@@ -75,11 +75,11 @@ authors:hap
 			<color red="0.01" green="0.01" blue="0.01" />
 		</rect>
 		<rect>
-			<bounds xc="0" yc="0" width="1.84" height="0.92" />
+			<bounds xc="0" yc="0" width="1.92" height="0.92" />
 			<color red="0.85" green="0.35" blue="0.3" />
 		</rect>
 		<rect state="1">
-			<bounds xc="0" yc="0" width="1.84" height="0.92" />
+			<bounds xc="0" yc="0" width="1.92" height="0.92" />
 			<color red="1" green="1" blue="1" alpha="0.20" />
 		</rect>
 	</element>
@@ -90,11 +90,11 @@ authors:hap
 			<color red="0.01" green="0.01" blue="0.01" />
 		</rect>
 		<rect>
-			<bounds xc="0" yc="0" width="1.84" height="0.92" />
+			<bounds xc="0" yc="0" width="1.92" height="0.92" />
 			<color red="0.25" green="0.25" blue="0.25" />
 		</rect>
 		<rect state="1">
-			<bounds xc="0" yc="0" width="1.84" height="0.92" />
+			<bounds xc="0" yc="0" width="1.92" height="0.92" />
 			<color red="1" green="1" blue="1" alpha="0.16" />
 		</rect>
 	</element>
@@ -105,11 +105,11 @@ authors:hap
 			<color red="0.01" green="0.01" blue="0.01" />
 		</rect>
 		<rect>
-			<bounds xc="0" yc="0" width="1.84" height="0.92" />
+			<bounds xc="0" yc="0" width="1.92" height="0.92" />
 			<color red="0.85" green="0.72" blue="0.32" />
 		</rect>
 		<rect state="1">
-			<bounds xc="0" yc="0" width="1.84" height="0.92" />
+			<bounds xc="0" yc="0" width="1.92" height="0.92" />
 			<color red="0" green="0" blue="0" alpha="0.13" />
 		</rect>
 	</element>
@@ -149,9 +149,9 @@ authors:hap
 		</repeat>
 
 		<repeat count="4">
-			<param name="y" start="2.65" increment="5" />
+			<param name="y" start="2.75" increment="5" />
 			<param name="i" start="1" increment="1" />
-			<element ref="text_l3~i~a"><bounds xc="16" y="~y~" width="7" height="1.6" /></element>
+			<element ref="text_l3~i~a"><bounds xc="16" y="~y~" width="7" height="1.5" /></element>
 		</repeat>
 
 		<element ref="text_l42a"><bounds xc="22" y="9" width="7" height="1.1" /></element>

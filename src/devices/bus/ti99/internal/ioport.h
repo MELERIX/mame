@@ -38,6 +38,7 @@ public:
 	virtual void msast_in(int state) { }
 	virtual void clock_in(int state) { }
 	virtual void reset_in(int state) { }
+	virtual void sbe(int state) { }
 
 	void set_ioport(ioport_device* ioport) { m_ioport = ioport; }
 
@@ -62,10 +63,7 @@ public:
 	ioport_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock, U &&opts, const char *dflt)
 		: ioport_device(mconfig, tag, owner, clock)
 	{
-		option_reset();
-		opts(*this);
-		set_default_option(dflt);
-		set_fixed(false);
+		set_options(std::forward<U>(opts), dflt, false);
 	}
 
 	ioport_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
@@ -80,6 +78,7 @@ public:
 	void msast_in(int state);
 	void clock_in(int state);
 	void reset_in(int state);
+	void sbe(int state);
 
 	// Callbacks
 	auto extint_cb() { return m_console_extint.bind(); }
@@ -103,5 +102,6 @@ DECLARE_DEVICE_TYPE_NS(TI99_IOPORT, bus::ti99::internal, ioport_device)
 
 void ti99_ioport_options_plain(device_slot_interface &device);
 void ti99_ioport_options_evpc(device_slot_interface &device);
+void ti99_ioport_options_evpc1(device_slot_interface &device);
 
 #endif /* __TI99IOPORT__ */

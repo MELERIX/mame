@@ -2,8 +2,6 @@
 // copyright-holders:Nicola Salmoria, Dan Boris
 /***************************************************************************
 
-  snk6502.c
-
   Functions to emulate the video hardware of the machine.
 
 ***************************************************************************/
@@ -36,22 +34,18 @@ void snk6502_state::snk6502_palette(palette_device &palette)
 		bit0 = BIT(color_prom[i], 0);
 		bit1 = BIT(color_prom[i], 1);
 		bit2 = BIT(color_prom[i], 2);
-
 		int const r = 0x21 * bit0 + 0x47 * bit1 + 0x97 * bit2;
 
 		// green component
 		bit0 = BIT(color_prom[i], 3);
 		bit1 = BIT(color_prom[i], 4);
 		bit2 = BIT(color_prom[i], 5);
-
 		int const g = 0x21 * bit0 + 0x47 * bit1 + 0x97 * bit2;
 
 		// blue component
-		bit0 = 0;
-		bit1 = BIT(color_prom[i], 6);
-		bit2 = BIT(color_prom[i], 7);
-
-		int const b = 0x21 * bit0 + 0x47 * bit1 + 0x97 * bit2;
+		bit0 = BIT(color_prom[i], 6);
+		bit1 = BIT(color_prom[i], 7);
+		int const b = 0x52 * bit0 + 0xad * bit1;
 
 		m_palette_val[i] = rgb_t(r, g, b);
 	}
@@ -168,15 +162,9 @@ VIDEO_START_MEMBER(snk6502_state,snk6502)
 	m_fg_tilemap->set_transparent_pen(0);
 
 	m_gfxdecode->gfx(0)->set_source(m_charram);
-	machine().save().register_postload(save_prepost_delegate(FUNC(snk6502_state::postload), this));
 }
 
-void snk6502_state::postload()
-{
-	m_gfxdecode->gfx(0)->mark_all_dirty();
-}
-
-VIDEO_START_MEMBER(snk6502_state,pballoon)
+VIDEO_START_MEMBER(fantasy_state,pballoon)
 {
 	VIDEO_START_CALL_MEMBER( snk6502 );
 
@@ -205,22 +193,18 @@ void snk6502_state::satansat_palette(palette_device &palette)
 		bit0 = BIT(color_prom[i], 0);
 		bit1 = BIT(color_prom[i], 1);
 		bit2 = BIT(color_prom[i], 2);
-
 		int const r = 0x21 * bit0 + 0x47 * bit1 + 0x97 * bit2;
 
 		// green component
 		bit0 = BIT(color_prom[i], 3);
 		bit1 = BIT(color_prom[i], 4);
 		bit2 = BIT(color_prom[i], 5);
-
 		int const g = 0x21 * bit0 + 0x47 * bit1 + 0x97 * bit2;
 
 		// blue component
-		bit0 = 0;
-		bit1 = BIT(color_prom[i], 6);
-		bit2 = BIT(color_prom[i], 7);
-
-		int const b = 0x21 * bit0 + 0x47 * bit1 + 0x97 * bit2;
+		bit0 = BIT(color_prom[i], 6);
+		bit1 = BIT(color_prom[i], 7);
+		int const b = 0x52 * bit0 + 0xad * bit1;
 
 		m_palette_val[i] = rgb_t(r, g, b);
 	}
@@ -290,5 +274,4 @@ VIDEO_START_MEMBER(snk6502_state,satansat)
 	m_fg_tilemap->set_transparent_pen(0);
 
 	m_gfxdecode->gfx(0)->set_source(m_charram);
-	machine().save().register_postload(save_prepost_delegate(FUNC(snk6502_state::postload), this));
 }

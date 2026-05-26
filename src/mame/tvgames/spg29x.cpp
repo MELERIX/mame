@@ -591,6 +591,25 @@ ROM_START( zonefamf )
 	//has 1x 48LC8M16A2 (128Mbit/16MByte SDRAM) for loading game into
 ROM_END
 
+ROM_START( prail07 )
+	ROM_REGION( 0x8400000, "nand", 0 )
+	ROM_LOAD("hy27uf081g2a.u13", 0x000000, 0x8400000, CRC(2bbe73a7) SHA1(f6af701a372f2600ed4d7df957d8fcaf164bb61b) )
+
+	ROM_REGION( 0x400, "seeprom", 0 ) // probably just unlockables
+	ROM_LOAD("24c08.u0", 0x000000, 0x400, CRC(b998dfb0) SHA1(6ab8d7299a1c04d2797cedfaa35ac09bfabfd001) )
+
+	ROM_REGION( 0x008000, "spg290", ROMREGION_32BIT | ROMREGION_LE )
+	ROM_LOAD32_DWORD("internal.rom", 0x000000, 0x008000, NO_DUMP)
+ROM_END
+
+ROM_START( bratzlfe )
+	ROM_REGION(  0x2000000, "bios", ROMREGION_ERASE00 ) // this was under a glob
+	ROM_LOAD( "bratzlife_32mb.bin", 0x0000, 0x2000000, CRC(fbbd670d) SHA1(4a112b758ffd24d3a350c5c6ba92630805f5628a) )
+
+	ROM_REGION( 0x008000, "spg290", ROMREGION_32BIT | ROMREGION_LE )
+	ROM_LOAD32_DWORD("internal.rom", 0x000000, 0x008000, NO_DUMP)
+ROM_END
+
 } // anonymous namespace
 
 
@@ -605,6 +624,10 @@ COMP( 2009, jak_bbh,    0,      0,      spg29x, hyperscan, spg29x_nand_game_stat
 COMP( 2011, jak_bbsf,   0,      0,      spg29x, hyperscan, spg29x_nand_game_state, nand_jak_bbsf,"JAKKS Pacific Inc", "Big Buck Safari (JAKKS Pacific TV Game)", MACHINE_NOT_WORKING | MACHINE_NO_SOUND ) // has ISSI 416A (24C16)
 
 COMP( 201?, zonefamf,  0,      0,      spg29x, hyperscan, spg29x_zonefamf_game_state, nand_zonefamf,"Zone", "Zone Family Fit", MACHINE_NOT_WORKING | MACHINE_NO_SOUND )
+// uses SPG291A-Hl171
+COMP( 2007, prail07,   0,      0,      spg29x, hyperscan, spg29x_zonefamf_game_state, nand_zonefamf,"Takara Tomy", "Boku wa Plarail Untenshi - Shinkansen de Ikou! (2007 version) (Japan)", MACHINE_NOT_WORKING | MACHINE_NO_SOUND )
+
+CONS( 2007, bratzlfe,  0,      0,      spg29x, hyperscan, spg29x_game_state, empty_init,  "MGA", "Bratz Life",   MACHINE_NO_SOUND | MACHINE_NOT_WORKING)
 
 // the sets in spg29x_lexibook_jg7425.cpp probably also belong here, as they use an SPG293 which has the same peripheral mappings (but they make use of additional features)
 // see emu293 https://github.com/gatecat/emu293

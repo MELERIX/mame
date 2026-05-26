@@ -543,7 +543,7 @@ void coco12_state::coco(machine_config &config)
 	// video hardware
 	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
 
-	MC6847_NTSC(config, m_vdg, XTAL(14'318'181) / 4); // VClk output from MC6883
+	MC6847(config, m_vdg, XTAL(14'318'181) / 4); // VClk output from MC6883
 	m_vdg->set_screen(m_screen);
 	m_vdg->hsync_wr_callback().set(FUNC(coco12_state::horizontal_sync));
 	m_vdg->fsync_wr_callback().set(FUNC(coco12_state::field_sync));
@@ -617,7 +617,7 @@ void coco12_state::coco2b(machine_config &config)
 {
 	coco(config);
 
-	MC6847T1_NTSC(config.replace(), m_vdg, XTAL(14'318'181) / 4);
+	MC6847T1(config.replace(), m_vdg, XTAL(14'318'181) / 4);
 	m_vdg->set_screen(m_screen);
 	m_vdg->hsync_wr_callback().set(FUNC(coco12_state::horizontal_sync));
 	m_vdg->fsync_wr_callback().set(FUNC(coco12_state::field_sync));
@@ -643,10 +643,7 @@ void coco12_state::t4426(machine_config &config)
 {
 	coco(config);
 
-	m_cococart->option_reset();
-	t4426_cart(*m_cococart);
-	m_cococart->set_default_option("t4426");
-	m_cococart->set_fixed(true); // This cart is fixed so no way to change it
+	m_cococart->set_options(t4426_cart, "t4426", true); // This cart is fixed so no way to change it
 }
 
 void coco12_state::cd6809(machine_config &config)

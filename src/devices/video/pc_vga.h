@@ -48,6 +48,7 @@ public:
 
 	void set_offset(uint16_t val) { vga.crtc.offset = val; }
 	void set_vram_size(size_t vram_size) { vga.svga_intf.vram_size = vram_size; }
+	auto vsync_cb() { return m_vsync_cb.bind(); }
 	// FIXME: should be protected, but virge_pci.cpp violates this
 	inline uint16_t get_crtc_port() { return BIT(vga.miscellaneous_output, 0) ? 0x3d0 : 0x3b0; }
 
@@ -185,6 +186,7 @@ protected:
 			struct
 			{
 				uint8_t A, B;
+				u32 base[2];
 			}char_sel;
 		} sequencer;
 
@@ -235,6 +237,7 @@ protected:
 	/**/    uint8_t map13;
 	/**/    uint8_t irq_clear;
 	/**/    uint8_t irq_disable;
+			uint8_t irq_latch;
 			uint8_t no_wrap;
 		} crtc;
 
@@ -274,6 +277,7 @@ protected:
 			int state;
 			uint8_t color[0x300]; /* flat RGB triplets */
 			int dirty;
+			uint8_t loading[3];
 		} dac;
 
 		struct {
@@ -305,6 +309,8 @@ protected:
 	address_space_config m_atc_space_config;
 
 	bool m_ioas = false;
+
+	devcb_write_line m_vsync_cb;
 private:
 	uint32_t start_addr();
 };
@@ -320,7 +326,7 @@ class svga_device :  public vga_device
 public:
 	virtual void zero() override;
 	virtual uint32_t screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect) override;
-	uint8_t get_video_depth();
+	virtual uint8_t get_video_depth();
 
 protected:
 	// construction/destruction
@@ -348,13 +354,6 @@ protected:
 };
 
 
-/*
-  pega notes (paradise)
-  build in amstrad pc1640
-
-  ROM_LOAD("40100", 0xc0000, 0x8000, CRC(d2d1f1ae) SHA1(98302006ee38a17c09bd75504cc18c0649174e33) )
-
-*/
 
 /*
   oak vga (oti 037 chip)

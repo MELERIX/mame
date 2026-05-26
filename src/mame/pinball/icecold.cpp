@@ -174,7 +174,7 @@ static INPUT_PORTS_START( icecold )
 	PORT_BIT(0x01, IP_ACTIVE_LOW, IPT_START1)
 	PORT_BIT(0x02, IP_ACTIVE_LOW, IPT_COIN1)
 	PORT_BIT(0x04, IP_ACTIVE_LOW, IPT_OTHER)    PORT_NAME("Ball Gate")  PORT_CODE(KEYCODE_0)
-	PORT_BIT(0x08, IP_ACTIVE_LOW, IPT_TILT1)
+	PORT_BIT(0x08, IP_ACTIVE_LOW, IPT_TILT)
 	PORT_BIT(0x10, IP_ACTIVE_LOW, IPT_OTHER)    PORT_NAME(DEF_STR( Free_Play )) PORT_CODE(KEYCODE_3)
 	PORT_BIT(0x20, IP_ACTIVE_LOW, IPT_OTHER)    PORT_NAME("Hopper cycle sensor")    PORT_CODE(KEYCODE_6)
 	PORT_BIT(0x40, IP_ACTIVE_LOW, IPT_OTHER)    PORT_NAME("Hopper empty")   PORT_CODE(KEYCODE_7)
@@ -217,7 +217,7 @@ void icecold_state::machine_start()
 void icecold_state::machine_reset()
 {
 	// CH-C is used for generate a 30hz clock
-	m_ay8910[0]->set_volume(2, 0);
+	m_ay8910[0]->set_output_gain(2, 0.0);
 
 	m_rmotor = m_lmotor = 10;
 	m_sint = 0;
