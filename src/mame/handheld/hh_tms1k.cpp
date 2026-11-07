@@ -258,6 +258,7 @@ on Joerg Woerner's datamath.org: http://www.datamath.org/IC_List.htm
 
 #include "softlist_dev.h"
 #include "screen.h"
+#include "screen_svg.h"
 #include "speaker.h"
 
 #include <bit>
@@ -424,9 +425,6 @@ protected:
 
 void hh_tms1k_state::machine_start()
 {
-	// resolve outputs
-	m_out_power.resolve();
-
 	// register for savestates
 	save_item(NAME(m_o));
 	save_item(NAME(m_r));
@@ -991,9 +989,6 @@ public:
 
 	void bcheetah(machine_config &config);
 
-protected:
-	virtual void machine_start() override ATTR_COLD;
-
 private:
 	output_finder<> m_motor1;
 	output_finder<> m_motor2_left;
@@ -1003,16 +998,6 @@ private:
 	void write_o(u16 data);
 	u8 read_k();
 };
-
-void bcheetah_state::machine_start()
-{
-	hh_tms1k_state::machine_start();
-
-	// resolve outputs
-	m_motor1.resolve();
-	m_motor2_left.resolve();
-	m_motor2_right.resolve();
-}
 
 // handlers
 
@@ -1186,10 +1171,9 @@ void racetime_state::racetime(machine_config &config)
 	m_maincpu->write_o().set(FUNC(racetime_state::write_o));
 
 	// video hardware
-	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_SVG));
+	screen_svg_device &screen(SCREEN_SVG(config, "screen"));
 	screen.set_refresh_hz(60);
 	screen.set_size(229, 1080);
-	screen.set_visarea_full();
 
 	PWM_DISPLAY(config, m_display).set_size(9, 9);
 
@@ -1462,15 +1446,13 @@ void uboat_state::uboat(machine_config &config)
 	m_maincpu->write_o().set(FUNC(uboat_state::write_o));
 
 	// video hardware
-	screen_device &screen1(SCREEN(config, "screen1", SCREEN_TYPE_SVG));
+	screen_svg_device &screen1(SCREEN_SVG(config, "screen1"));
 	screen1.set_refresh_hz(60);
 	screen1.set_size(372, 1080);
-	screen1.set_visarea_full();
 
-	screen_device &screen2(SCREEN(config, "screen2", SCREEN_TYPE_SVG));
+	screen_svg_device &screen2(SCREEN_SVG(config, "screen2"));
 	screen2.set_refresh_hz(60);
 	screen2.set_size(372, 1080);
-	screen2.set_visarea_full();
 
 	PWM_DISPLAY(config, m_display).set_size(10, 15);
 	config.set_default_layout(layout_uboat);
@@ -4763,9 +4745,9 @@ ROM_END
   * 2 7seg LEDs, 5 lamps, 1-bit sound
   * 3 lightsensors, lightgun
 
-  To play it in MAME, either use the clickable artwork with -mouse, or set
-  button 1 to "Z or X or C" and each lightsensor to one of those keys.
-  Although the game seems mostly playable without having to use the gun trigger
+  To play it in MAME, either use the clickable artwork, or set button 1 to
+  "Z or X or C" and each lightsensor to one of those keys. Although the game
+  seems mostly playable without having to use the gun trigger
 
 *******************************************************************************/
 
@@ -5014,7 +4996,7 @@ ROM_END
   are denoted by words ("left", "center", "short", etc), and an alternate one
   with little guys drawn next to the LEDs.
 
-  led translation table: led LDzz from game PCB = MAME y.x:
+  LED translation table: LED LDzz from game PCB = MAME y.x:
 
     0 = -     10 = 1.2   20 = 4.2   30 = 6.0
     1 = 2.3   11 = 0.4   21 = 4.1   31 = 6.1
@@ -5786,10 +5768,9 @@ void einvader_state::einvader(machine_config &config)
 	m_maincpu->write_o().set(FUNC(einvader_state::write_o));
 
 	// video hardware
-	screen_device &mask(SCREEN(config, "mask", SCREEN_TYPE_SVG));
+	screen_svg_device &mask(SCREEN_SVG(config, "mask"));
 	mask.set_refresh_hz(60);
 	mask.set_size(945, 1080);
-	mask.set_visarea_full();
 
 	PWM_DISPLAY(config, m_display).set_size(10, 8);
 	m_display->set_segmask(0x380, 0x7f);
@@ -5929,10 +5910,9 @@ void efootb4_state::efootb4(machine_config &config)
 	m_maincpu->write_o().set(FUNC(efootb4_state::write_o));
 
 	// video hardware
-	screen_device &mask(SCREEN(config, "mask", SCREEN_TYPE_SVG));
+	screen_svg_device &mask(SCREEN_SVG(config, "mask"));
 	mask.set_refresh_hz(60);
 	mask.set_size(1920, 904);
-	mask.set_visarea_full();
 
 	PWM_DISPLAY(config, m_display).set_size(16, 7);
 	m_display->set_segmask(0xfc00, 0x7f);
@@ -7112,10 +7092,9 @@ void ginv_state::ginv(machine_config &config)
 	m_maincpu->write_o().set(FUNC(ginv_state::write_o));
 
 	// video hardware
-	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_SVG));
+	screen_svg_device &screen(SCREEN_SVG(config, "screen"));
 	screen.set_refresh_hz(60);
 	screen.set_size(236, 1080);
-	screen.set_visarea_full();
 
 	PWM_DISPLAY(config, m_display).set_size(9, 12);
 
@@ -7239,10 +7218,9 @@ void ginv1000_state::ginv1000(machine_config &config)
 	m_maincpu->write_o().set(FUNC(ginv1000_state::write_o));
 
 	// video hardware
-	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_SVG));
+	screen_svg_device &screen(SCREEN_SVG(config, "screen"));
 	screen.set_refresh_hz(60);
 	screen.set_size(226, 1080);
-	screen.set_visarea_full();
 
 	PWM_DISPLAY(config, m_display).set_size(10, 12);
 
@@ -7386,10 +7364,9 @@ void ginv2000_state::ginv2000(machine_config &config)
 	m_expander->write_port7_callback().set(FUNC(ginv2000_state::expander_w));
 
 	// video hardware
-	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_SVG));
+	screen_svg_device &screen(SCREEN_SVG(config, "screen"));
 	screen.set_refresh_hz(60);
 	screen.set_size(364, 1080);
-	screen.set_visarea_full();
 
 	PWM_DISPLAY(config, m_display).set_size(10, 16);
 
@@ -7949,7 +7926,7 @@ void skywriter_state::skywriter(machine_config &config)
 	TIMER(config, "check_pos").configure_periodic(FUNC(skywriter_state::check_pos), attotime::from_usec(1));
 
 	// video hardware
-	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_RASTER));
+	screen_device &screen(SCREEN(config, "screen"));
 	screen.set_video_attributes(VIDEO_ALWAYS_UPDATE); // for led decay
 	screen.set_physical_aspect(16, 1);
 	screen.set_refresh_hz(60);
@@ -8358,10 +8335,9 @@ void liveafb_state::liveafb(machine_config &config)
 	m_maincpu->write_o().set(FUNC(liveafb_state::write_o));
 
 	// video hardware
-	screen_device &mask(SCREEN(config, "mask", SCREEN_TYPE_SVG));
+	screen_svg_device &mask(SCREEN_SVG(config, "mask"));
 	mask.set_refresh_hz(60);
 	mask.set_size(1834, 1080);
-	mask.set_visarea_full();
 
 	PWM_DISPLAY(config, m_display).set_size(6+4+4, 8+2);
 	m_display->set_segmask(0x3f, 0x7f);
@@ -9122,10 +9098,9 @@ void horseran_state::horseran(machine_config &config)
 	m_maincpu->write_r().set(FUNC(horseran_state::write_r));
 
 	// video hardware
-	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_SVG));
+	screen_svg_device &screen(SCREEN_SVG(config, "screen"));
 	screen.set_refresh_hz(60);
 	screen.set_size(1920, 978);
-	screen.set_visarea_full();
 
 	HLCD0569(config, m_lcd, 1100); // C=0.022uF
 	m_lcd->write_cols().set(FUNC(horseran_state::lcd_output_w));
@@ -9169,7 +9144,9 @@ class mdndclab_state : public hh_tms1k_state
 {
 public:
 	mdndclab_state(const machine_config &mconfig, device_type type, const char *tag) :
-		hh_tms1k_state(mconfig, type, tag)
+		hh_tms1k_state(mconfig, type, tag),
+		m_colwall(*this, "colwall%u%u", 1U, 1U),
+		m_rowwall(*this, "rowwall%u%u", 1U, 1U)
 	{ }
 
 	void mdndclab(machine_config &config);
@@ -9178,6 +9155,9 @@ private:
 	void write_r(u32 data);
 	void write_o(u16 data);
 	u8 read_k();
+
+	// these are used by the layout to store the presence of walls
+	output_finder<7, 8> m_colwall, m_rowwall;
 };
 
 // handlers
@@ -10126,13 +10106,6 @@ void bigtrak_state::machine_start()
 {
 	hh_tms1k_state::machine_start();
 
-	// resolve outputs
-	m_left_motor_forward.resolve();
-	m_left_motor_reverse.resolve();
-	m_right_motor_forward.resolve();
-	m_right_motor_reverse.resolve();
-	m_ext_out.resolve();
-
 	// register for savestates
 	save_item(NAME(m_gearbox_pos));
 }
@@ -10353,11 +10326,6 @@ private:
 void mbdtower_state::machine_start()
 {
 	hh_tms1k_state::machine_start();
-
-	// resolve outputs
-	m_motor_pos_out.resolve();
-	m_card_pos_out.resolve();
-	m_motor_on_out.resolve();
 
 	// register for savestates
 	save_item(NAME(m_motor_pos));
@@ -11538,7 +11506,7 @@ void splitsec_state::splitsec(machine_config &config)
 
 ROM_START( splitsec )
 	ROM_REGION( 0x1000, "maincpu", 0 )
-	ROM_LOAD( "mp7314", 0x0000, 0x1000, CRC(e94b2098) SHA1(f0fc1f56a829252185592a2508740354c50bedf8) )
+	ROM_LOAD( "mp7314", 0x0000, 0x1000, CRC(5a70312c) SHA1(2cb988444e6fed1398df20a75727d9dfd4c2d0b8) )
 
 	ROM_REGION( 867, "maincpu:mpla", 0 )
 	ROM_LOAD( "tms1100_common1_micro.pla", 0, 867, CRC(62445fc9) SHA1(d6297f2a4bc7a870b76cc498d19dbb0ce7d69fec) )
@@ -17109,10 +17077,9 @@ void tdracula_state::tdracula(machine_config &config)
 	m_maincpu->write_o().set(FUNC(tdracula_state::write_o));
 
 	// video hardware
-	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_SVG));
+	screen_svg_device &screen(SCREEN_SVG(config, "screen"));
 	screen.set_refresh_hz(60);
 	screen.set_size(478, 1080);
-	screen.set_visarea_full();
 
 	PWM_DISPLAY(config, m_display).set_size(11, 17);
 	config.set_default_layout(layout_tdracula);
@@ -17252,10 +17219,9 @@ void slepachi_state::slepachi(machine_config &config)
 	m_expander->write_port7_callback().set(FUNC(slepachi_state::expander_w));
 
 	// video hardware
-	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_SVG));
+	screen_svg_device &screen(SCREEN_SVG(config, "screen"));
 	screen.set_refresh_hz(60);
 	screen.set_size(503, 1080);
-	screen.set_visarea_full();
 
 	PWM_DISPLAY(config, m_display).set_size(8, 21);
 

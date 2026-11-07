@@ -502,7 +502,7 @@ void tail2nos_state::tail2nos(machine_config &config)
 	m_audiocpu->set_addrmap(AS_PROGRAM, &tail2nos_state::sound_map);
 	m_audiocpu->set_addrmap(AS_IO, &tail2nos_state::sound_port_map); // IRQs are triggered by the YM2608
 
-	ACIA6850(config, m_acia, 0);
+	ACIA6850(config, m_acia);
 	m_acia->irq_handler().set_inputline("maincpu", M68K_IRQ_3);
 	m_acia->txd_handler().set("com_out", FUNC(rs232_port_device::write_txd));
 
@@ -520,7 +520,7 @@ void tail2nos_state::tail2nos(machine_config &config)
 	acia_clock.signal_handler().append(m_acia, FUNC(acia6850_device::write_rxc));
 
 	// video hardware
-	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_RASTER));
+	screen_device &screen(SCREEN(config, "screen"));
 	screen.set_refresh_hz(60);
 	screen.set_vblank_time(ATTOSECONDS_IN_USEC(0));
 	screen.set_size(64*8, 32*8);
@@ -531,7 +531,7 @@ void tail2nos_state::tail2nos(machine_config &config)
 	GFXDECODE(config, m_gfxdecode, m_palette, gfx_tail2nos);
 	PALETTE(config, m_palette).set_format(palette_device::xRGB_555, 2048);
 
-	K051316(config, m_k051316, 0);
+	K051316(config, m_k051316);
 	m_k051316->set_palette(m_palette);
 	m_k051316->set_bpp(-4);
 	m_k051316->set_offsets(7, -14);

@@ -13,10 +13,12 @@
 #include "config.h"
 #include "emuopts.h"
 #include "fileio.h"
+#include "input.h"
 #include "inputdev.h"
 #include "main.h"
 #include "natkeyboard.h"
 #include "profiler.h"
+#include "video.h"
 
 #include "ui/uimain.h"
 
@@ -32,6 +34,7 @@
 #include <algorithm>
 #include <bit>
 #include <cctype>
+#include <cstdio>
 #include <ctime>
 #include <sstream>
 #include <type_traits>
@@ -87,22 +90,6 @@ inline s64 recip_scale(s64 scale)
 inline s32 apply_scale(s32 value, s64 scale)
 {
 	return (s64(value) * scale) / (1 << 24);
-}
-
-//-------------------------------------------------
-//  compute_shift -- get shift required to right-
-//  align an I/O port field value
-//-------------------------------------------------
-
-inline u8 compute_shift(ioport_value mask)
-{
-	u8 result = 0U;
-	while (mask && !BIT(mask, 0))
-	{
-		mask >>= 1;
-		++result;
-	}
-	return result;
 }
 
 
@@ -404,7 +391,7 @@ private:
 const char *const ioport_manager::seqtypestrings[] = { "standard", "increment", "decrement" };
 
 
-u8 const inp_header::MAGIC[inp_header::OFFS_BASETIME - inp_header::OFFS_MAGIC] = { 'M', 'A', 'M', 'E', 'I', 'N', 'P', 0 };
+u8 const inp_header::MAGIC[] = { 'M', 'A', 'M', 'E', 'I', 'N', 'P', 0 };
 
 
 
@@ -945,6 +932,7 @@ std::string ioport_field::key_name(int which) const
 	case UCHAR_SHIFT_1: return "Shift";
 	case UCHAR_SHIFT_2: return "Ctrl";
 	case UCHAR_MAMEKEY(ESC): return "Esc";
+	case UCHAR_MAMEKEY(TAB): return "Tab";
 	case UCHAR_MAMEKEY(INSERT): return "Insert";
 	case UCHAR_MAMEKEY(DEL): return "Delete";
 	case UCHAR_MAMEKEY(HOME): return "Home";
@@ -1498,7 +1486,7 @@ ioport_field_live::ioport_field_live(ioport_field &field, analog_field *analog) 
 	}
 
 	// Name keyboard key names
-	if (field.type_class() == INPUT_CLASS_KEYBOARD && field.specific_name() == nullptr)
+	if ((field.type_class() == INPUT_CLASS_KEYBOARD) && !field.specific_name())
 	{
 		// loop through each character on the field
 		for (int which = 0; which < (1 << (UCHAR_SHIFT_END - UCHAR_SHIFT_BEGIN + 1)); which++)
@@ -3011,7 +2999,7 @@ time_t ioport_manager::playback_init()
 
 	// return an explicit error if file isn't found in given path
 	if (filerr == std::errc::no_such_file_or_directory)
-		fatalerror("Input file %s not found\n",filename);
+		fatalerror("Input file %s not found\n", filename);
 
 	// TODO: bail out any other error laconically for now
 	if (filerr)
@@ -3563,7 +3551,7 @@ void dynamic_field::write(ioport_value newval)
 
 analog_field::analog_field(ioport_field &field) :
 	m_field(field),
-	m_shift(compute_shift(field.mask())),
+	m_shift(field.mask() ? std::countr_zero(field.mask()) : 0U),
 	m_adjdefvalue((field.defvalue() & field.mask()) >> m_shift),
 	m_adjmin((field.minval() & field.mask()) >> m_shift),
 	m_adjmax((field.maxval() & field.mask()) >> m_shift),
@@ -4011,22 +3999,20 @@ void analog_field::read(ioport_value &result)
 	if (!m_field.enabled())
 		return;
 
-	// if set programmatically, only use the override value
-	if (m_use_adjoverride)
+	s32 value;
+	if (!m_use_adjoverride)
 	{
-		result = m_adjoverride;
-		return;
+		// interpolate if appropriate and if time has passed since the last update
+		value = !m_interpolate ? m_accum : manager().frame_interpolate(m_previous, m_accum);
+
+		// apply standard analog settings
+		value = apply_settings(value);
 	}
-
-	// start with the raw value
-	s32 value = m_accum;
-
-	// interpolate if appropriate and if time has passed since the last update
-	if (m_interpolate)
-		value = manager().frame_interpolate(m_previous, m_accum);
-
-	// apply standard analog settings
-	value = apply_settings(value);
+	else
+	{
+		// if set programmatically, use the override value
+		value = m_adjoverride;
+	}
 
 	// remap the value if needed
 	if (m_field.remap_table() != nullptr)

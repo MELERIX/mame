@@ -400,7 +400,7 @@ class sys573_jvs_host : public jvs_host
 {
 public:
 	// construction/destruction
-	sys573_jvs_host(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
+	sys573_jvs_host(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock = 0);
 	void send_packet(uint8_t *data, int length);
 	int received_packet(uint8_t *buffer);
 
@@ -478,6 +478,8 @@ public:
 		driver_device(mconfig, type, tag),
 		m_maincpu(*this, "maincpu"),
 		m_sys573_jvs_host(*this, "sys573_jvs_host"),
+		m_gpu(*this, "gpu"),
+		m_spu(*this, "spu"),
 		m_k573dio(*this, "k573dio"),
 		m_output_lamps(*this, "lamp%u", 0U),
 		m_output_blue_io_lamp(*this, "blue io %u", 0U),
@@ -546,7 +548,9 @@ public:
 		m_pccard2(*this, "pccard2"),
 		m_pccard_cd{ 1, 1 },
 		m_h8_response(*this, "h8_response"),
-		m_ram(*this, "maincpu:ram"),
+		m_ram(*this, "ram"),
+		m_gpu_ram(*this, "gpu_ram"),
+		m_spu_ram(*this, "spu_ram"),
 		m_flashbank(*this, "flashbank"),
 		m_in2(*this, "IN2"),
 		m_out1(*this, "OUT1"),
@@ -660,7 +664,6 @@ protected:
 
 	virtual void machine_start() override ATTR_COLD;
 	virtual void machine_reset() override ATTR_COLD;
-	virtual void driver_start() override;
 
 	void gx700pwfbf_init(gx700pwfbf_output_delegate &&output_callback_func);
 
@@ -668,6 +671,8 @@ protected:
 
 	required_device<psxcpu_device> m_maincpu;
 	required_device<sys573_jvs_host> m_sys573_jvs_host;
+	required_device<psxgpu_device> m_gpu;
+	required_device<spu_device> m_spu;
 	optional_device<k573dio_device> m_k573dio;
 
 	output_finder<2> m_output_lamps;
@@ -678,6 +683,7 @@ protected:
 	output_finder<4> m_output_extra_balls;
 
 	// Individual outputs
+	// FIXME: split these up into derived classes so games only show the outputs they actually have
 	output_finder<> m_output_motor;
 	output_finder<> m_output_brake;
 	output_finder<> m_output_cymbal;
@@ -833,6 +839,8 @@ private:
 	uint8_t m_jvs_output_buffer[512];
 
 	required_device<ram_device> m_ram;
+	required_device<ram_device> m_gpu_ram;
+	required_device<ram_device> m_spu_ram;
 	required_device<address_map_bank_device> m_flashbank;
 	required_ioport m_in2;
 	required_ioport m_out1;
@@ -1216,7 +1224,7 @@ int ksys573_state::pccard_cd_r()
 	return m_pccard_cd[N];
 }
 
-void ksys573_state::driver_start()
+void ksys573_state::machine_start()
 {
 	m_atapi_timer = timer_alloc( FUNC( ksys573_state::atapi_xfer_end ), this );
 	m_atapi_timer->adjust( attotime::never );
@@ -1226,66 +1234,6 @@ void ksys573_state::driver_start()
 	save_item( NAME( m_pccard_cd ) );
 
 	m_h8_index = 0;
-}
-
-void ksys573_state::machine_start()
-{
-	m_output_lamps.resolve();
-	m_output_blue_io_lamp.resolve();
-	m_output_red_io_lamp.resolve();
-	m_output_extra_balls.resolve();
-	m_output_motor.resolve();
-	m_output_brake.resolve();
-	m_output_cymbal.resolve();
-	m_output_speaker.resolve();
-	m_output_start_lamp.resolve();
-	m_output_select_button.resolve();
-	m_output_select_left.resolve();
-	m_output_select_right.resolve();
-	m_output_select_lrl.resolve();
-	m_output_left.resolve();
-	m_output_right.resolve();
-	m_output_neon_top.resolve();
-	m_output_neon_woofer.resolve();
-	m_output_halogen.resolve();
-	m_output_foot_up.resolve();
-	m_output_foot_left.resolve();
-	m_output_foot_right.resolve();
-	m_output_foot_down.resolve();
-	m_output_body_right_low.resolve();
-	m_output_body_left_low.resolve();
-	m_output_body_left_high.resolve();
-	m_output_body_right_high.resolve();
-	m_output_body_center.resolve();
-	m_output_body_right.resolve();
-	m_output_body_left.resolve();
-	m_output_hi_hat.resolve();
-	m_output_high_tom.resolve();
-	m_output_low_tom.resolve();
-	m_output_snare.resolve();
-	m_output_spot_left.resolve();
-	m_output_spot_right.resolve();
-	m_output_spot_left_right.resolve();
-	m_output_player_start.resolve();
-	m_output_player_red.resolve();
-	m_output_player_green.resolve();
-	m_output_player_blue.resolve();
-	m_output_punchman_left_top.resolve();
-	m_output_punchman_left_middle.resolve();
-	m_output_punchman_left_bottom.resolve();
-	m_output_punchman_right_top.resolve();
-	m_output_punchman_right_middle.resolve();
-	m_output_punchman_right_bottom.resolve();
-	m_output_fire_lamp_left.resolve();
-	m_output_fire_fan_left.resolve();
-	m_output_fire_fan_right.resolve();
-	m_output_fire_lamp_right.resolve();
-	m_output_conga_left.resolve();
-	m_output_conga_right.resolve();
-	m_output_conga_centre.resolve();
-	m_output_spot_light_yellow.resolve();
-	m_output_spot_light_blue.resolve();
-	m_output_spot_light_pink.resolve();
 }
 
 void ksys573_state::machine_reset()
@@ -2592,14 +2540,15 @@ void ksys573_state::cr589_config(device_t *device)
 void ksys573_state::konami573(machine_config &config, bool no_cdrom)
 {
 	/* basic machine hardware */
-	CXD8530CQ(config, m_maincpu, XTAL(67'737'600));
+	CXD8530CQ(config, m_maincpu, 67.7376_MHz_XTAL);
 	m_maincpu->set_addrmap(AS_PROGRAM, &ksys573_state::konami573_map);
+	m_maincpu->set_ram(m_ram);
 	m_maincpu->subdevice<psxdma_device>("dma")->install_read_handler(5, psxdma_device::read_delegate(&ksys573_state::cdrom_dma_read, this));
 	m_maincpu->subdevice<psxdma_device>("dma")->install_write_handler(5, psxdma_device::write_delegate(&ksys573_state::cdrom_dma_write, this));
 
-	subdevice<ram_device>("maincpu:ram")->set_default_size("4M");
+	RAM(config, m_ram).set_bits(32).set_default_size("4M").set_extra_options("4M,8M,16M").set_default_value(0);
 
-	ATA_INTERFACE(config, m_ata, 0);
+	ATA_INTERFACE(config, m_ata);
 	m_ata->irq_handler().set(FUNC(ksys573_state::ata_interrupt));
 	if(!no_cdrom)
 	{
@@ -2608,7 +2557,7 @@ void ksys573_state::konami573(machine_config &config, bool no_cdrom)
 		m_ata->slot(0).set_default_option("cr589");
 	}
 
-	konami573_cassette_slot_device &cassette(KONAMI573_CASSETTE_SLOT(config, "cassette", 0));
+	konami573_cassette_slot_device &cassette(KONAMI573_CASSETTE_SLOT(config, "cassette"));
 	cassette.dsr_handler().set("maincpu:sio1", FUNC(psxsio1_device::write_dsr));
 
 	// onboard flash
@@ -2621,32 +2570,42 @@ void ksys573_state::konami573(machine_config &config, bool no_cdrom)
 	FUJITSU_29F016A(config, "29f016a.31h");
 	FUJITSU_29F016A(config, "29f016a.27h");
 
-	PCCARD_SLOT(config, m_pccard1, 0);
+	PCCARD_SLOT(config, m_pccard1);
 	m_pccard1->cd1().set([this](int state) { m_pccard_cd[0] = state; });
 
-	PCCARD_SLOT(config, m_pccard2, 0);
+	PCCARD_SLOT(config, m_pccard2);
 	m_pccard2->cd1().set([this](int state) { m_pccard_cd[1] = state; });
 
 	ADDRESS_MAP_BANK(config, m_flashbank ).set_map( &ksys573_state::flashbank_map ).set_options( ENDIANNESS_LITTLE, 16, 32, 0x400000);
 
 	/* video hardware */
-	CXD8561Q(config, "gpu", XTAL(53'693'175), 0x200000, m_maincpu.target()).set_screen("screen");
+	CXD8561Q(config, m_gpu, 67.7376_MHz_XTAL / 2);
+	m_gpu->set_cpu(m_maincpu);
+	m_gpu->set_ram(m_gpu_ram);
+	m_gpu->set_screen("screen");
+	m_gpu->set_vclkn(53.693175_MHz_XTAL);
 
-	SCREEN(config, "screen", SCREEN_TYPE_RASTER);
+	RAM(config, m_gpu_ram).set_bits(16).set_default_size("2M").set_extra_options("2M").set_default_value(0);
+
+	SCREEN(config, "screen");
 
 	/* sound hardware */
 	SPEAKER(config, "speaker", 2).front();
 
-	spu_device &spu(SPU(config, "spu", XTAL(67'737'600)/2, m_maincpu.target()));
-	spu.add_route(0, "speaker", 1.0, 0);
-	spu.add_route(1, "speaker", 1.0, 1);
+	SPU(config, m_spu, 67.7376_MHz_XTAL / 2);
+	m_spu->set_cpu(m_maincpu);
+	m_spu->set_ram(m_spu_ram);
+	m_spu->add_route(0, "speaker", 1.0, 0);
+	m_spu->add_route(1, "speaker", 1.0, 1);
 
-	M48T58(config, "m48t58", 0);
+	RAM(config, m_spu_ram).set_bits(16).set_default_size("512K").set_extra_options("512K,1M,2M,4M").set_default_value(0);
+
+	M48T58(config, "m48t58");
 
 	adc0834_device &adc(ADC0834(config, "adc0834"));
 	adc.set_input_callback(FUNC(ksys573_state::analogue_inputs_callback));
 
-	SYS573_JVS_HOST(config, m_sys573_jvs_host, 0);
+	SYS573_JVS_HOST(config, m_sys573_jvs_host);
 
 	// Uncomment for generating new security cartridges
 	// Warning: Does not play well with memory card reader (JVS chaining issue?)
@@ -2782,7 +2741,7 @@ void ddr_state::ddr2mc2(machine_config &config)
 	k573a(config);
 	cassx(config);
 
-	KONAMI_573_MEMORY_CARD_READER(config, "k573mcr", 0, m_sys573_jvs_host);
+	KONAMI_573_MEMORY_CARD_READER(config, "k573mcr", m_sys573_jvs_host);
 }
 
 void ddr_state::ddr2ml(machine_config &config)
@@ -2791,7 +2750,7 @@ void ddr_state::ddr2ml(machine_config &config)
 	pccard1_16mb(config);
 	cassx(config);
 
-	KONAMI_573_MEMORY_CARD_READER(config, "k573mcr", 0, m_sys573_jvs_host);
+	KONAMI_573_MEMORY_CARD_READER(config, "k573mcr", m_sys573_jvs_host);
 }
 
 void ddr_state::ddrbocd(machine_config &config)
@@ -2809,7 +2768,7 @@ void ddr_state::ddr3m(machine_config &config)
 	pccard2_32mb(config);
 	cassyyi(config);
 
-	KONAMI_573_MEMORY_CARD_READER(config, "k573mcr", 0, m_sys573_jvs_host);
+	KONAMI_573_MEMORY_CARD_READER(config, "k573mcr", m_sys573_jvs_host);
 }
 
 void ddr_state::ddr3mp(machine_config &config)
@@ -2820,7 +2779,7 @@ void ddr_state::ddr3mp(machine_config &config)
 	pccard2_32mb(config);
 	cassxzi(config);
 
-	KONAMI_573_MEMORY_CARD_READER(config, "k573mcr", 0, m_sys573_jvs_host);
+	KONAMI_573_MEMORY_CARD_READER(config, "k573mcr", m_sys573_jvs_host);
 }
 
 void ddr_state::ddrusa(machine_config &config)
@@ -2839,7 +2798,7 @@ void ddr_state::ddr5m(machine_config &config)
 	pccard2_32mb(config);
 	casszi(config);
 
-	KONAMI_573_MEMORY_CARD_READER(config, "k573mcr", 0, m_sys573_jvs_host);
+	KONAMI_573_MEMORY_CARD_READER(config, "k573mcr", m_sys573_jvs_host);
 }
 
 // Dancing Stage
@@ -2926,7 +2885,7 @@ void ksys573_state::ddr4ms(machine_config &config)
 	pccard2_32mb(config);
 	cassxzi(config);
 
-	KONAMI_573_MEMORY_CARD_READER(config, "k573mcr", 0, m_sys573_jvs_host);
+	KONAMI_573_MEMORY_CARD_READER(config, "k573mcr", m_sys573_jvs_host);
 }
 
 // DrumMania
@@ -2952,7 +2911,7 @@ void ksys573_state::drmn4m(machine_config &config)
 
 	casszi(config);
 
-	KONAMI_573_MULTI_SESSION_UNIT(config, "k573msu", 0);
+	KONAMI_573_MULTI_SESSION_UNIT(config, "k573msu");
 }
 
 void ksys573_state::drmn9m(machine_config &config)
@@ -2962,9 +2921,9 @@ void ksys573_state::drmn9m(machine_config &config)
 
 	casszi(config);
 
-	KONAMI_573_MULTI_SESSION_UNIT(config, "k573msu", 0);
+	KONAMI_573_MULTI_SESSION_UNIT(config, "k573msu");
 
-	// KONAMI_573_NETWORK_PCB_UNIT(config, "k573npu", 0);
+	// KONAMI_573_NETWORK_PCB_UNIT(config, "k573npu");
 }
 
 void ksys573_state::drmn10m(machine_config &config)
@@ -2974,9 +2933,9 @@ void ksys573_state::drmn10m(machine_config &config)
 
 	casszi(config);
 
-	KONAMI_573_MULTI_SESSION_UNIT(config, "k573msu", 0);
+	KONAMI_573_MULTI_SESSION_UNIT(config, "k573msu");
 
-	// KONAMI_573_NETWORK_PCB_UNIT(config, "k573npu", 0);
+	// KONAMI_573_NETWORK_PCB_UNIT(config, "k573npu");
 }
 
 // Guitar Freaks
@@ -3001,7 +2960,7 @@ void ksys573_state::gtrfrk2ml(machine_config &config)
 	pccard1_32mb(config); // HACK: The installation tries to check and erase 32mb but only flashes 16mb.
 
 	// For Guitar Freaks 2nd Mix Link Ver 1 (memory cards) and Link Ver 2 (memory cards + controllers)
-	KONAMI_573_MEMORY_CARD_READER(config, "k573mcr", 0, m_sys573_jvs_host);
+	KONAMI_573_MEMORY_CARD_READER(config, "k573mcr", m_sys573_jvs_host);
 }
 
 void ksys573_state::gtrfrk3m(machine_config &config)
@@ -3010,7 +2969,7 @@ void ksys573_state::gtrfrk3m(machine_config &config)
 	cassxzi(config);
 	pccard1_16mb(config);
 
-	KONAMI_573_MEMORY_CARD_READER(config, "k573mcr", 0, m_sys573_jvs_host);
+	KONAMI_573_MEMORY_CARD_READER(config, "k573mcr", m_sys573_jvs_host);
 }
 
 void ksys573_state::gtrfrk5m(machine_config &config)
@@ -3033,7 +2992,7 @@ void ksys573_state::gtfrk10m(machine_config &config)
 	casszi(config);
 	pccard1_32mb(config);
 
-	// KONAMI_573_NETWORK_PCB_UNIT(config, "k573npu", 0);
+	// KONAMI_573_NETWORK_PCB_UNIT(config, "k573npu");
 }
 
 void ksys573_state::gtfrk11m(machine_config &config)
@@ -3042,7 +3001,7 @@ void ksys573_state::gtfrk11m(machine_config &config)
 	casszi(config);
 	pccard1_32mb(config);
 
-	// KONAMI_573_NETWORK_PCB_UNIT(config, "k573npu", 0);
+	// KONAMI_573_NETWORK_PCB_UNIT(config, "k573npu");
 }
 
 // Miscellaneous

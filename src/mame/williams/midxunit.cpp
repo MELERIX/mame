@@ -154,7 +154,7 @@ public:
 		, m_gun_led(*this, "Player%u_Gun_LED", 1U)
 	{ }
 
-	void midxunit(machine_config &config);
+	void midxunit(machine_config &config) ATTR_COLD;
 
 protected:
 	virtual void machine_start() override ATTR_COLD;
@@ -419,9 +419,6 @@ void midxunit_state::uart_w(offs_t offset, uint8_t data)
 
 void midxunit_state::machine_start()
 {
-	m_gun_recoil.resolve();
-	m_gun_led.resolve();
-
 	m_nvram->set_base(m_nvram_data.target(), 0x2000);
 
 	save_item(NAME(m_iodata));
@@ -669,7 +666,7 @@ void midxunit_state::midxunit(machine_config &config)
 	// video hardware
 	PALETTE(config, m_palette).set_format(palette_device::xRGB_555, 32768);
 
-	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_RASTER));
+	screen_device &screen(SCREEN(config, "screen"));
 	screen.set_raw(PIXEL_CLOCK, 506, 101, 501, 289, 20, 274);
 	screen.set_screen_update(m_maincpu, FUNC(tms34010_device::tms340x0_ind16));
 	screen.set_palette(m_palette);
@@ -693,7 +690,7 @@ void midxunit_state::midxunit(machine_config &config)
 	// sound hardware
 	SPEAKER(config, "mono").front_center();
 
-	DCS_AUDIO_2K_UART(config, m_dcs, 0);
+	DCS_AUDIO_2K_UART(config, m_dcs);
 	m_dcs->set_maincpu_tag(m_maincpu);
 	m_dcs->add_route(0, "mono", 1.0);
 }

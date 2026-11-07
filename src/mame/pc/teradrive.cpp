@@ -33,7 +33,7 @@ NOTES (MD side):
 - 16 KiB of Z80 RAM (vs. 8 of stock)
 - 128 KiB of VDP RAM (vs. 64)
 - 68k can switch between native 7.67 MHz or 10 MHz
-- has discrete YM3438 in place of YM2612
+- has discrete YM3438 in place of YM2612 (same as Mega Drive 2)
 - Mega CD expansion port working with DIY extension cable, 32x needs at least a passive cart adapter
 - focus 3 in debugger is the current default for MD side
 - bp ff0122,1,{fill 0xff8100,4,"SEGA";g} to bypass TMSS loading for games without a valid header
@@ -409,8 +409,8 @@ public:
 		, m_md_ioports(*this, "md_ioport%u", 1U)
 	{ }
 
-	void teradrive(machine_config &config);
-	void at_softlists(machine_config &config);
+	void teradrive(machine_config &config) ATTR_COLD;
+	void at_softlists(machine_config &config) ATTR_COLD;
 
 protected:
 	void machine_start() override ATTR_COLD;
@@ -921,7 +921,7 @@ void teradrive_state::teradrive(machine_config &config)
 	m_chipset->spkr_callback().set(FUNC(teradrive_state::wd7600_spkr));
 
 	// on board devices
-	ISA16(config, m_isabus, 0);
+	ISA16(config, m_isabus);
 	m_isabus->set_memspace(m_x86cpu, AS_PROGRAM);
 	m_isabus->set_iospace(m_x86cpu, AS_IO);
 	m_isabus->iochck_callback().set(m_chipset, FUNC(wd7600_device::iochck_w));
@@ -993,7 +993,7 @@ void teradrive_state::teradrive(machine_config &config)
 	m_mdz80cpu->set_addrmap(AS_PROGRAM, &teradrive_state::md_z80_map);
 	m_mdz80cpu->set_addrmap(AS_IO, &teradrive_state::md_z80_io);
 
-	SCREEN(config, m_mdscreen, SCREEN_TYPE_RASTER);
+	SCREEN(config, m_mdscreen);
 	// NOTE: PAL is 423x312
 	m_mdscreen->set_raw(md_master_xtal / 8, 427, 0, 320, 262, 0, 224);
 	m_mdscreen->set_screen_update(FUNC(teradrive_state::md_screen_update));
@@ -1022,13 +1022,13 @@ void teradrive_state::teradrive(machine_config &config)
 	// TODO: gated thru VDP
 	hl.output_handler().set_inputline(m_md68kcpu, 2);
 
-	MEGADRIVE_IO_PORT(config, m_md_ioports[0], 0);
+	MEGADRIVE_IO_PORT(config, m_md_ioports[0]);
 	m_md_ioports[0]->hl_handler().set("hl", FUNC(input_merger_device::in_w<0>));
 
-	MEGADRIVE_IO_PORT(config, m_md_ioports[1], 0);
+	MEGADRIVE_IO_PORT(config, m_md_ioports[1]);
 	m_md_ioports[1]->hl_handler().set("hl", FUNC(input_merger_device::in_w<1>));
 
-	MEGADRIVE_IO_PORT(config, m_md_ioports[2], 0);
+	MEGADRIVE_IO_PORT(config, m_md_ioports[2]);
 	m_md_ioports[2]->hl_handler().set("hl", FUNC(input_merger_device::in_w<2>));
 
 	for (int N = 0; N < 3; N++)
@@ -1054,7 +1054,7 @@ void teradrive_state::teradrive(machine_config &config)
 
 	SPEAKER(config, "md_speaker", 2).front();
 
-	YM2612(config, m_opn, md_master_xtal / 7);
+	YM3438(config, m_opn, md_master_xtal / 7);
 	m_opn->add_route(0, "md_speaker", 0.50, 0);
 	m_opn->add_route(1, "md_speaker", 0.50, 1);
 }

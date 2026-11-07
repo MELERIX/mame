@@ -1580,7 +1580,7 @@ void hp85_state::hp85(machine_config &config)
 
 	m_cpu->set_addrmap(AS_PROGRAM, &hp85_state::cpu_mem_map);
 
-	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
+	SCREEN(config, m_screen);
 	m_screen->set_raw(MASTER_CLOCK / 2 , 312 , 0 , 256 , 256 , 0 , 192);
 	m_screen->set_screen_update(FUNC(hp85_state::screen_update));
 	m_screen->screen_vblank().set(FUNC(hp85_state::vblank_w));
@@ -1590,11 +1590,11 @@ void hp85_state::hp85(machine_config &config)
 	TIMER(config, m_prt_busy_timer).configure_generic(FUNC(hp85_state::prt_busy_timer));
 
 	// Tape drive
-	HP_1MA6(config, "tape", 0);
+	HP_1MA6(config, "tape");
 
 	// Printer output
-	BITBANGER(config, m_prt_graph_out, 0);
-	BITBANGER(config, m_prt_alpha_out, 0);
+	BITBANGER(config, m_prt_graph_out);
+	BITBANGER(config, m_prt_alpha_out);
 
 	SOFTWARE_LIST(config, "optrom_list").set_original("hp85_rom");
 }
@@ -1757,7 +1757,7 @@ void hp86_state::hp86(machine_config &config)
 
 	RAM(config , m_ram).set_default_size("128K");
 
-	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
+	SCREEN(config, m_screen);
 	m_screen->set_raw(MASTER_CLOCK , 784 , 0 , 640 , 261 , 0 , 240);
 	m_screen->set_screen_update(FUNC(hp86_state::screen_update));
 	m_screen->screen_vblank().set(FUNC(hp86_state::vblank_w));
@@ -1776,8 +1776,6 @@ void hp86_state::hp86(machine_config &config)
 void hp86_state::machine_start()
 {
 	hp80_base_state::machine_start();
-
-	m_run_light.resolve();
 
 	m_screen->register_screen_bitmap(m_bitmap);
 	m_video_mem = std::make_unique<uint8_t[]>(VIDEO_MEM_SIZE);

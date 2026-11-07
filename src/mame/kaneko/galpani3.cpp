@@ -448,7 +448,7 @@ void galpani3_state::galpani3(machine_config &config)
 	m_maincpu->set_addrmap(AS_PROGRAM, &galpani3_state::main_map);
 	TIMER(config, "scantimer").configure_scanline(FUNC(galpani3_state::scanline), "screen", 0, 1);
 
-	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_RASTER));
+	screen_device &screen(SCREEN(config, "screen"));
 	screen.set_refresh_hz(60);
 	screen.set_vblank_time(ATTOSECONDS_IN_USEC(0));
 	screen.set_size(64*8, 64*8);
@@ -464,15 +464,15 @@ void galpani3_state::galpani3(machine_config &config)
 
 	PALETTE(config, m_palette).set_format(palette_device::xGRB_555, 0x4000);
 
-	KANEKO_RLE_SPRITES(config, m_spritegen, 0);
+	KANEKO_RLE_SPRITES(config, m_spritegen);
 	m_spritegen->set_screen("screen");
 	m_spritegen->set_sprite_kludge(0, 0);
 
-	KANEKO_GRAP2(config, m_grap2[0], 0).set_device_rom_tag("rlebg");
+	KANEKO_GRAP2(config, m_grap2[0]).set_device_rom_tag("rlebg");
 
-	KANEKO_GRAP2(config, m_grap2[1], 0).set_device_rom_tag("rlebg");
+	KANEKO_GRAP2(config, m_grap2[1]).set_device_rom_tag("rlebg");
 
-	KANEKO_GRAP2(config, m_grap2[2], 0).set_device_rom_tag("rlebg");
+	KANEKO_GRAP2(config, m_grap2[2]).set_device_rom_tag("rlebg");
 
 	/* sound hardware */
 	SPEAKER(config, "mono").front_center();

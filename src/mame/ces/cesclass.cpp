@@ -25,7 +25,6 @@ TODO:
 
 **************************************************************************************************/
 
-
 #include "emu.h"
 
 #include "cpu/m68000/m68000.h"
@@ -60,7 +59,6 @@ public:
 	void tsclass(machine_config &config);
 
 protected:
-	virtual void machine_start() override ATTR_COLD;
 	virtual void video_start() override ATTR_COLD;
 	virtual void video_reset() override ATTR_COLD;
 
@@ -71,6 +69,7 @@ protected:
 
 	void palette_init(palette_device &palette) const;
 	void main_map(address_map &map) ATTR_COLD;
+
 private:
 	required_device<cpu_device> m_maincpu;
 	required_device<okim6295_device> m_oki;
@@ -100,6 +99,7 @@ public:
 	{ }
 
 	void hrclass(machine_config &config);
+
 private:
 	virtual void lamps_w(u16 data) override;
 };
@@ -107,6 +107,8 @@ private:
 
 void cesclassic_state::video_start()
 {
+	save_item(NAME(m_lcd_display));
+
 	m_screen[0]->register_screen_bitmap(m_lcd_bitmap[0]);
 	m_screen[1]->register_screen_bitmap(m_lcd_bitmap[1]);
 }
@@ -133,9 +135,10 @@ void cesclassic_state::dma_trigger_w(offs_t offset, u16 data, u16 mem_mask)
 
 		rectangle cliprect = m_screen[N]->visible_area();
 
-		for(int y = cliprect.min_y; y <= cliprect.max_y; y++)
+		for(int y = cliprect.top(); y <= cliprect.bottom(); y++)
 		{
-			for(int x = cliprect.min_x; x <= cliprect.max_x; x+= 16)
+			auto *const dst = &m_lcd_bitmap[N].pix(y);
+			for(int x = cliprect.left(); x <= cliprect.right(); x+= 16)
 			{
 				const u32 base_offset = ((x + base_screen) >> 4) + y * 16;
 				const u16 cell_high = vram[base_offset];
@@ -144,7 +147,7 @@ void cesclassic_state::dma_trigger_w(offs_t offset, u16 data, u16 mem_mask)
 				{
 					const u8 color = BIT(cell_low, 15 - xi) | (BIT(cell_high, 15 - xi) << 1);
 
-					m_lcd_bitmap[N].pix(y, x + xi) = m_palette->pen(color);
+					dst[x + xi] = m_palette->pen(color);
 				}
 			}
 		}
@@ -354,11 +357,6 @@ void cesclassic_state::palette_init(palette_device &palette) const
 		palette.set_pen_color(idx, 0x3f * idx, 0x2a * idx, 0);
 }
 
-void cesclassic_state::machine_start()
-{
-	m_led_matrix.resolve();
-}
-
 void cesclassic_state::cesclassic(machine_config &config)
 {
 	M68000(config, m_maincpu, 24000000/2);
@@ -372,14 +370,14 @@ void cesclassic_state::cesclassic(machine_config &config)
 	// DS1232 MicroMonitor
 
 	// LCD screen section (2bpp)
-	screen_device &l_screen(SCREEN(config, "l_lcd", SCREEN_TYPE_LCD));
+	screen_device &l_screen(SCREEN(config, "l_lcd").set_lcd());
 	l_screen.set_refresh_hz(60);
 	l_screen.set_vblank_time(ATTOSECONDS_IN_USEC(2500));
 	l_screen.set_screen_update(FUNC(cesclassic_state::screen_update<0>));
 	l_screen.set_size(256+128, 64+24);
 	l_screen.set_visarea(0, 128 - 1, 0, 64 - 1);
 
-	screen_device &r_screen(SCREEN(config, "r_lcd", SCREEN_TYPE_LCD));
+	screen_device &r_screen(SCREEN(config, "r_lcd").set_lcd());
 	r_screen.set_refresh_hz(60);
 	r_screen.set_vblank_time(ATTOSECONDS_IN_USEC(2500));
 	r_screen.set_screen_update(FUNC(cesclassic_state::screen_update<1>));

@@ -156,9 +156,9 @@ uint32_t midas_state::screen_update(screen_device &screen, bitmap_rgb32 &bitmap,
 	// fill with background color first
 	bitmap.fill(0x0, cliprect);
 
-	m_sprgen->draw_sprites(bitmap, cliprect.min_y);
+	m_sprgen->draw_sprites(bitmap, cliprect.top());
 
-	m_sprgen->draw_fixed_layer(bitmap, cliprect.min_y);
+	m_sprgen->draw_fixed_layer(bitmap, cliprect.top());
 
 	return 0;
 }
@@ -660,12 +660,12 @@ void midas_state::livequiz(machine_config &config)
 	EEPROM_93C46_16BIT(config, m_eeprom);
 
 	/* video hardware */
-	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
+	SCREEN(config, m_screen);
 	m_screen->set_raw(XTAL(24'000'000) / 4, NEOGEO_HTOTAL, NEOGEO_HBEND, NEOGEO_HBSTART, NEOGEO_VTOTAL, NEOGEO_VBEND, NEOGEO_VBSTART);
 	m_screen->set_screen_update(FUNC(midas_state::screen_update));
 	m_screen->screen_vblank().set(FUNC(midas_state::screen_vblank));
 
-	NEOGEO_SPRITE_MIDAS(config, m_sprgen, 0).set_screen(m_screen);
+	NEOGEO_SPRITE_MIDAS(config, m_sprgen).set_screen(m_screen);
 
 	GFXDECODE(config, m_gfxdecode, m_palette, gfx_midas);
 	PALETTE(config, m_palette).set_format(palette_device::xRGB_888, 0x10000);
@@ -695,12 +695,12 @@ void hammer_state::hammer(machine_config &config)
 	TICKET_DISPENSER(config, m_ticket, attotime::from_msec(200));
 
 	/* video hardware */
-	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
+	SCREEN(config, m_screen);
 	m_screen->set_raw(XTAL(24'000'000) / 4, NEOGEO_HTOTAL, NEOGEO_HBEND, NEOGEO_HBSTART, NEOGEO_VTOTAL, NEOGEO_VBEND, NEOGEO_VBSTART);
 	m_screen->set_screen_update(FUNC(hammer_state::screen_update));
 	m_screen->screen_vblank().set(FUNC(hammer_state::screen_vblank));
 
-	NEOGEO_SPRITE_MIDAS(config, m_sprgen, 0).set_screen(m_screen);
+	NEOGEO_SPRITE_MIDAS(config, m_sprgen).set_screen(m_screen);
 
 	GFXDECODE(config, m_gfxdecode, m_palette, gfx_midas);
 	PALETTE(config, m_palette).set_format(palette_device::xRGB_888, 0x10000);
@@ -831,7 +831,7 @@ void midas_state::init_livequiz()
 {
 	uint16_t *rom = (uint16_t *) memregion("maincpu")->base();
 
-	// PROTECTION CHECKS
+	// HACK: patch protection check
 	rom[0x13345a/2] = 0x4e75;
 }
 

@@ -625,7 +625,7 @@ void midtunit_base_state::tunit_core(machine_config &config)
 	// video hardware
 	PALETTE(config, m_palette).set_format(palette_device::xRGB_555, 32768);
 
-	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_RASTER));
+	screen_device &screen(SCREEN(config, "screen"));
 	// from TMS340 registers
 	screen.set_raw(PIXEL_CLOCK * 2, 506, 100, 500, 289, 20, 274);
 	screen.set_screen_update("maincpu", FUNC(tms34010_device::tms340x0_ind16));
@@ -642,7 +642,7 @@ void midtunit_adpcm_state::tunit_adpcm(machine_config &config)
 
 	SPEAKER(config, "speaker").front_center();
 
-	WILLIAMS_ADPCM_SOUND(config, m_adpcm_sound, 0).add_route(ALL_OUTPUTS, "speaker", 1.0);
+	WILLIAMS_ADPCM_SOUND(config, m_adpcm_sound).add_route(ALL_OUTPUTS, "speaker", 1.0);
 }
 
 
@@ -657,7 +657,7 @@ void mk2_state::mk2(machine_config &config)
 
 	SPEAKER(config, "speaker").front_center();
 
-	DCS_AUDIO_2K(config, m_dcs, 0);
+	DCS_AUDIO_2K(config, m_dcs);
 	m_dcs->set_maincpu_tag(m_maincpu);
 	m_dcs->add_route(0, "speaker", 1.0);
 }

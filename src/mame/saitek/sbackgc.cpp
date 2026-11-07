@@ -49,7 +49,7 @@ TODO:
 #include "sound/dac.h"
 #include "video/pwm.h"
 
-#include "screen.h"
+#include "screen_svg.h"
 #include "speaker.h"
 
 #include <bit>
@@ -77,8 +77,6 @@ public:
 		m_out_lcd(*this, "s%u.%u", 0U, 0U)
 	{ }
 
-	void shared(machine_config &config);
-
 	DECLARE_INPUT_CHANGED_MEMBER(init_board);
 	DECLARE_INPUT_CHANGED_MEMBER(bear_off);
 	DECLARE_INPUT_CHANGED_MEMBER(power_off) { if (newval) m_power = false; }
@@ -86,6 +84,8 @@ public:
 protected:
 	virtual void machine_start() override ATTR_COLD;
 	virtual void machine_reset() override ATTR_COLD { m_power = true; }
+
+	void shared(machine_config &config) ATTR_COLD;
 
 	// devices/pointers
 	required_device<cpu_device> m_maincpu;
@@ -122,8 +122,6 @@ protected:
 
 void sbackgc_base_state::machine_start()
 {
-	m_out_lcd.resolve();
-
 	// register for savestates
 	save_item(NAME(m_power));
 	save_item(NAME(m_led_data));
@@ -142,7 +140,7 @@ public:
 		sbackgc_base_state(mconfig, type, tag)
 	{ }
 
-	void sbackgc(machine_config &config);
+	void sbackgc(machine_config &config) ATTR_COLD;
 
 private:
 	// I/O handlers
@@ -163,7 +161,7 @@ public:
 		sbackgc_base_state(mconfig, type, tag)
 	{ }
 
-	void ecbackg(machine_config &config);
+	void ecbackg(machine_config &config) ATTR_COLD;
 
 private:
 	// I/O handlers
@@ -631,10 +629,9 @@ void sbackgc_base_state::shared(machine_config &config)
 	PWM_DISPLAY(config, m_lcd_pwm).set_size(2, 24);
 	m_lcd_pwm->output_x().set(FUNC(sbackgc_base_state::lcd_pwm_w));
 
-	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_SVG));
+	screen_svg_device &screen(SCREEN_SVG(config, "screen"));
 	screen.set_refresh_hz(60);
 	screen.set_size(1920/5, 518/5);
-	screen.set_visarea_full();
 
 	PWM_DISPLAY(config, m_led_pwm).set_size(3, 8);
 

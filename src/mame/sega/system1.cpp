@@ -304,6 +304,7 @@ seem to have access to.
 #include "machine/segacrpt_device.h"
 #include "cpu/z80/mc8123.h"
 
+#include "sound.h"
 #include "speaker.h"
 
 
@@ -419,8 +420,6 @@ void shtngmst_state::machine_start()
 {
 	system1_state::machine_start();
 
-	m_gun_solenoid.resolve();
-
 	save_item(NAME(m_gun_output));
 	save_item(NAME(m_gun_trigger));
 }
@@ -527,8 +526,11 @@ u8 system1_state::sound_data_r()
 	// if we have an 8255 PPI, get the data from the port and toggle the ack
 	if (m_ppi8255 != nullptr)
 	{
-		m_ppi8255->pc6_w(0);
-		m_ppi8255->pc6_w(1);
+		if (!machine().side_effects_disabled())
+		{
+			m_ppi8255->pc6_w(0);
+			m_ppi8255->pc6_w(1);
+		}
 		return m_soundlatch->read();
 	}
 
@@ -536,8 +538,11 @@ u8 system1_state::sound_data_r()
 	else if (m_pio != nullptr)
 	{
 		u8 data = m_pio->port_read(z80pio_device::PORT_A);
-		m_pio->strobe(z80pio_device::PORT_A, false);
-		m_pio->strobe(z80pio_device::PORT_A, true);
+		if (!machine().side_effects_disabled())
+		{
+			m_pio->strobe(z80pio_device::PORT_A, false);
+			m_pio->strobe(z80pio_device::PORT_A, true);
+		}
 		return data;
 	}
 
@@ -715,25 +720,25 @@ u8 system1_state::nob_mcu_status_r()
 
 u8 system1_state::nobb_inport1c_r()
 {
-//  logerror("IN  $1c : pc = %04x - data = 0x80\n",m_maincpu->pc());
-	return(0x80); // infinite loop (at 0x0fb3) until bit 7 is set
+	//logerror("IN  $1c : pc = %04x - data = 0x80\n",m_maincpu->pc());
+	return 0x80; // infinite loop (at 0x0fb3) until bit 7 is set
 }
 
 u8 system1_state::nobb_inport22_r()
 {
-//  logerror("IN  $22 : pc = %04x - data = %02x\n",m_maincpu->pc(),nobb_inport17_step);
-	return(0); // nobb_inport17_step;
+	//logerror("IN  $22 : pc = %04x - data = %02x\n",m_maincpu->pc(),nobb_inport17_step);
+	return 0; // nobb_inport17_step;
 }
 
 u8 system1_state::nobb_inport23_r()
 {
-//  logerror("IN  $23 : pc = %04x - step = %02x\n",m_maincpu->pc(),m_nobb_inport23_step);
-	return(m_nobb_inport23_step);
+	//logerror("IN  $23 : pc = %04x - step = %02x\n",m_maincpu->pc(),m_nobb_inport23_step);
+	return m_nobb_inport23_step;
 }
 
 void system1_state::nobb_outport24_w(u8 data)
 {
-//  logerror("OUT $24 : pc = %04x - data = %02x\n",m_maincpu->pc(),data);
+	//logerror("OUT $24 : pc = %04x - data = %02x\n",m_maincpu->pc(),data);
 	m_nobb_inport23_step = data;
 }
 
@@ -2207,7 +2212,7 @@ void system1_state::sys1ppi(machine_config &config)
 	Z80(config, m_soundcpu, SOUND_CLOCK/2);
 	m_soundcpu->set_addrmap(AS_PROGRAM, &system1_state::sound_map);
 
-	TIMER(config, "soundirq", 0).configure_scanline(FUNC(system1_state::soundirq_gen), "screen", 32, 64);
+	TIMER(config, "soundirq").configure_scanline(FUNC(system1_state::soundirq_gen), "screen", 32, 64);
 
 	config.set_maximum_quantum(attotime::from_hz(6000));
 
@@ -2220,7 +2225,7 @@ void system1_state::sys1ppi(machine_config &config)
 	m_ppi8255->tri_pc_callback().set_constant(0x80);
 
 	// video hardware
-	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
+	SCREEN(config, m_screen);
 	m_screen->set_video_attributes(VIDEO_ALWAYS_UPDATE); // needed for proper hardware collisions
 	m_screen->set_raw(MASTER_CLOCK/2, 640, 0, 512, 260, 0, 224);
 	m_screen->set_screen_update(FUNC(system1_state::screen_update_system1));

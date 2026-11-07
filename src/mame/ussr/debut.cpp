@@ -76,7 +76,7 @@ public:
 	// assume that RESET button is tied to CPU RESET pin
 	DECLARE_INPUT_CHANGED_MEMBER(reset_button) { m_maincpu->set_input_line(INPUT_LINE_RESET, newval ? ASSERT_LINE : CLEAR_LINE); }
 
-	void debutm(machine_config &config);
+	void debutm(machine_config &config) ATTR_COLD;
 
 protected:
 	virtual void machine_start() override ATTR_COLD;
@@ -100,6 +100,7 @@ private:
 
 	// I/O handlers
 	INTERRUPT_GEN_MEMBER(interrupt);
+	IRQ_CALLBACK_MEMBER(cpu_acknowledge_irq);
 	u8 input_r(offs_t offset);
 	void latch_w(offs_t offset, u8 data);
 	void lcd_update_w(int state);
@@ -107,8 +108,6 @@ private:
 
 void debut_state::machine_start()
 {
-	m_out_digit.resolve();
-
 	// register for savestates
 	save_item(NAME(m_latch));
 	save_item(NAME(m_dac_data));
@@ -122,7 +121,12 @@ void debut_state::machine_start()
 
 INTERRUPT_GEN_MEMBER(debut_state::interrupt)
 {
-	m_maincpu->set_input_line_and_vector(0, HOLD_LINE, 0xff); // I8086
+	m_maincpu->set_input_line(0, HOLD_LINE);
+}
+
+IRQ_CALLBACK_MEMBER(debut_state::cpu_acknowledge_irq)
+{
+	return 0xff;
 }
 
 u8 debut_state::input_r(offs_t offset)
@@ -231,6 +235,7 @@ void debut_state::debutm(machine_config &config)
 	m_maincpu->set_addrmap(AS_PROGRAM, &debut_state::main_map);
 	m_maincpu->set_addrmap(AS_IO, &debut_state::main_io);
 	m_maincpu->if_handler().set(FUNC(debut_state::lcd_update_w));
+	m_maincpu->set_irq_acknowledge_callback(FUNC(debut_state::cpu_acknowledge_irq));
 
 	SENSORBOARD(config, m_board).set_type(sensorboard_device::BUTTONS);
 	m_board->init_cb().set(m_board, FUNC(sensorboard_device::preset_chess));

@@ -61,7 +61,7 @@ class janshi_vdp_device : public device_t, public device_memory_interface, publi
 {
 public:
 	// constructor/destructor
-	janshi_vdp_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
+	janshi_vdp_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock = 0);
 
 	// configurations
 	void set_janshi_hack(bool janshi_hack) { m_janshi_hack = janshi_hack; }
@@ -1107,7 +1107,7 @@ void pinkiri8_state::pinkiri8(machine_config &config)
 	m_maincpu->set_vblank_int("screen", FUNC(pinkiri8_state::nmi_line_assert));
 	m_maincpu->out_pa_callback().set(FUNC(pinkiri8_state::output_regs_w));
 
-	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_RASTER));
+	screen_device &screen(SCREEN(config, "screen"));
 	screen.set_refresh_hz(60);
 	screen.set_vblank_time(ATTOSECONDS_IN_USEC(0));
 	screen.set_size(64*8, 64*8);
@@ -1115,7 +1115,7 @@ void pinkiri8_state::pinkiri8(machine_config &config)
 	screen.set_screen_update(m_vdp, FUNC(janshi_vdp_device::screen_update));
 	screen.set_palette("janshivdp:palette");
 
-	JANSHIVDP(config, m_vdp, 0);
+	JANSHIVDP(config, m_vdp);
 
 	/* sound hardware */
 	SPEAKER(config, "mono").front_center();

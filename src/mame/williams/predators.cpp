@@ -1,5 +1,5 @@
 // license:BSD-3-Clause
-// copyright-holders: Angelo Salese, David Haywood, Lysiwyg, Philip Bennett
+// copyright-holders: Angelo Salese, David Haywood, Philip Bennett
 /*
 
 Williams The Predators (prototype)
@@ -93,7 +93,7 @@ void williams_pred_sound_device::device_add_mconfig(machine_config &config)
 	m_pia->irqa_handler().set("mainirq", FUNC(input_merger_device::in_w<0>));
 	m_pia->irqb_handler().set("mainirq", FUNC(input_merger_device::in_w<1>));
 
-	HC55516(config, "cvsd", 0).add_route(ALL_OUTPUTS, *this, 0.8);
+	HC55516(config, "cvsd").add_route(ALL_OUTPUTS, *this, 0.8);
 
 	MC1408(config, m_dac, 0).add_route(ALL_OUTPUTS, *this, 0.1);
 }
@@ -763,7 +763,7 @@ void predators_state::predators(machine_config &config)
 
 	for (auto &screen : m_screen)
 	{
-		SCREEN(config, screen, SCREEN_TYPE_RASTER);
+		SCREEN(config, screen);
 		screen->set_refresh_hz(60);
 		screen->set_size(512, 256);
 		screen->set_visarea(48, 436 - 1, 20, 252 - 1);

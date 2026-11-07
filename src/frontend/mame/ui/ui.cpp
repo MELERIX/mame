@@ -27,13 +27,13 @@
 
 #include "imagedev/cassette.h"
 #include "machine/laserdsc.h"
-#include "video/vector.h"
 
 #include "config.h"
 #include "emuopts.h"
 #include "mameopts.h"
 #include "drivenum.h"
 #include "fileio.h"
+#include "input.h"
 #include "natkeyboard.h"
 #include "render.h"
 #include "cheat.h"
@@ -41,14 +41,20 @@
 #include "rendlay.h"
 #include "romload.h"
 #include "screen.h"
+#include "sound.h"
 #include "speaker.h"
 #include "uiinput.h"
+#include "vector.h"
+#include "video.h"
 
 // FIXME: allow OSD module headers to be included in a less ugly way
 #include "../osd/modules/lib/osdlib.h"
 #include "../osd/modules/lib/osdobj_common.h"
 
+#include "ioprocsstream.h"
+
 #include <functional>
+#include <locale>
 #include <type_traits>
 
 
@@ -658,9 +664,9 @@ void mame_ui_manager::display_startup_screens(bool first_time)
 	bool show_warnings = true;
 	bool video_none = strcmp(downcast<osd_options &>(machine().options()).video(), OSDOPTVAL_NONE) == 0;
 
-	// disable everything if we are using -str for 300 or fewer seconds, or if we're the empty driver,
+	// disable everything if we are using -str for 300 (5 minutes) or fewer seconds, or if we're the empty driver,
 	// or if we are debugging, or if there's no mame window to send inputs to
-	if (!first_time || (str > 0 && str < 60*5) || &machine().system() == &GAME_NAME(___empty) || (machine().debug_flags & DEBUG_FLAG_ENABLED) || video_none)
+	if (!first_time || (str > 0 && str <= 60*5) || &machine().system() == &GAME_NAME(___empty) || (machine().debug_flags & DEBUG_FLAG_ENABLED) || video_none)
 		show_gameinfo = show_warnings = false;
 
 #if defined(__EMSCRIPTEN__)
@@ -679,13 +685,14 @@ void mame_ui_manager::display_startup_screens(bool first_time)
 			// draw a standard message window
 			draw_text_box(target, warning_text, ui::text_layout::text_justify::LEFT, 0.5F, 0.5F, warning_color);
 
-			if (machine().ui_input().pressed(IPT_UI_CANCEL))
+			auto &inp(machine().ui_input());
+			if (inp.pressed(IPT_UI_CANCEL))
 			{
 				// if the user cancels, exit out completely
 				machine().schedule_exit();
 				return HANDLER_CANCEL;
 			}
-			else if (machine().ui_input().pressed(IPT_UI_MENU))
+			else if (inp.pressed(IPT_UI_MENU))
 			{
 				config_menu = true;
 				return HANDLER_CANCEL;
@@ -697,7 +704,7 @@ void mame_ui_manager::display_startup_screens(bool first_time)
 			}
 
 			ui_event event;
-			while (machine().ui_input().pop_event(&event))
+			while (inp.pop_event(&event))
 			{
 				if (event.target)
 				{
@@ -1680,6 +1687,7 @@ uint32_t mame_ui_manager::handler_ingame()
 	}
 
 	// process UI events and update pointers if necessary
+	auto &inp(machine().ui_input());
 	process_ui_events();
 	display_pointer_vector pointers;
 	pointers.reserve(m_active_pointers.size());
@@ -1708,7 +1716,7 @@ uint32_t mame_ui_manager::handler_ingame()
 	if (!ui_disabled)
 	{
 		// paste command
-		if (machine().ui_input().pressed(IPT_UI_PASTE))
+		if (inp.pressed(IPT_UI_PASTE))
 			machine().natkeyboard().paste();
 	}
 
@@ -1717,14 +1725,14 @@ uint32_t mame_ui_manager::handler_ingame()
 	if (ui_disabled)
 		return 0;
 
-	if (machine().ui_input().pressed(IPT_UI_CANCEL))
+	if (inp.pressed(IPT_UI_CANCEL))
 	{
 		request_quit();
 		return 0;
 	}
 
 	// turn on menus if requested
-	if (machine().ui_input().pressed(IPT_UI_MENU))
+	if (inp.pressed(IPT_UI_MENU))
 	{
 		m_ui_target = &current_ui_target();
 		if (!machine().paused() && options().menu_pause())
@@ -1739,7 +1747,7 @@ uint32_t mame_ui_manager::handler_ingame()
 	}
 
 	// if the on-screen display isn't up and the user has toggled it, turn it on
-	if (!get_slider_list().empty() && !(machine().debug_flags & DEBUG_FLAG_ENABLED) && machine().ui_input().pressed(IPT_UI_ON_SCREEN_DISPLAY))
+	if (!get_slider_list().empty() && !(machine().debug_flags & DEBUG_FLAG_ENABLED) && inp.pressed(IPT_UI_ON_SCREEN_DISPLAY))
 	{
 		m_ui_target = &current_ui_target();
 		ui::menu::stack_push<ui::menu_sliders>(*this, *m_ui_target, true);
@@ -1748,13 +1756,13 @@ uint32_t mame_ui_manager::handler_ingame()
 	}
 
 	// handle a reset request
-	if (machine().ui_input().pressed(IPT_UI_RESET_MACHINE))
+	if (inp.pressed(IPT_UI_RESET_MACHINE))
 		machine().schedule_hard_reset();
-	if (machine().ui_input().pressed(IPT_UI_SOFT_RESET))
+	if (inp.pressed(IPT_UI_SOFT_RESET))
 		machine().schedule_soft_reset();
 
 	// handle a request to display graphics/palette
-	if (machine().ui_input().pressed(IPT_UI_SHOW_GFX))
+	if (inp.pressed(IPT_UI_SHOW_GFX))
 	{
 		for (auto *target = machine().render().first_target(); target; target = target->next())
 		{
@@ -1775,7 +1783,7 @@ uint32_t mame_ui_manager::handler_ingame()
 	}
 
 	// handle a tape control key
-	if (machine().ui_input().pressed(IPT_UI_TAPE_START))
+	if (inp.pressed(IPT_UI_TAPE_START))
 	{
 		for (cassette_image_device &cass : cassette_device_enumerator(machine().root_device()))
 		{
@@ -1783,7 +1791,7 @@ uint32_t mame_ui_manager::handler_ingame()
 			return 0;
 		}
 	}
-	if (machine().ui_input().pressed(IPT_UI_TAPE_STOP))
+	if (inp.pressed(IPT_UI_TAPE_STOP))
 	{
 		for (cassette_image_device &cass : cassette_device_enumerator(machine().root_device()))
 		{
@@ -1793,7 +1801,7 @@ uint32_t mame_ui_manager::handler_ingame()
 	}
 
 	// handle a save state request
-	if (machine().ui_input().pressed(IPT_UI_SAVE_STATE))
+	if (inp.pressed(IPT_UI_SAVE_STATE))
 	{
 		m_ui_target = &current_ui_target();
 		ui::menu::stack_push<ui::menu_save_state>(*this, *m_ui_target, true);
@@ -1802,7 +1810,7 @@ uint32_t mame_ui_manager::handler_ingame()
 	}
 
 	// handle a load state request
-	if (machine().ui_input().pressed(IPT_UI_LOAD_STATE))
+	if (inp.pressed(IPT_UI_LOAD_STATE))
 	{
 		m_ui_target = &current_ui_target();
 		ui::menu::stack_push<ui::menu_load_state>(*this, *m_ui_target, true);
@@ -1811,29 +1819,29 @@ uint32_t mame_ui_manager::handler_ingame()
 	}
 
 	// handle a quick save state request
-	if (machine().ui_input().pressed(IPT_UI_SAVE_STATE_QUICK))
+	if (inp.pressed(IPT_UI_SAVE_STATE_QUICK))
 	{
 		machine().schedule_save("quick");
 		return 0;
 	}
 
 	// handle a quick load state request
-	if (machine().ui_input().pressed(IPT_UI_LOAD_STATE_QUICK))
+	if (inp.pressed(IPT_UI_LOAD_STATE_QUICK))
 	{
 		machine().schedule_load("quick");
 		return 0;
 	}
 
 	// handle a save snapshot request
-	if (machine().ui_input().pressed(IPT_UI_SNAPSHOT))
+	if (inp.pressed(IPT_UI_SNAPSHOT))
 		machine().video().save_active_screen_snapshots();
 
 	// toggle pause
-	if (machine().ui_input().pressed(IPT_UI_PAUSE))
+	if (inp.pressed(IPT_UI_PAUSE))
 		machine().toggle_pause();
 
 	// pause single step
-	if (machine().ui_input().pressed(IPT_UI_PAUSE_SINGLE))
+	if (inp.pressed(IPT_UI_PAUSE_SINGLE))
 	{
 		machine().rewind_capture();
 		set_single_step(true);
@@ -1841,39 +1849,39 @@ uint32_t mame_ui_manager::handler_ingame()
 	}
 
 	// rewind single step
-	if (machine().ui_input().pressed(IPT_UI_REWIND_SINGLE))
+	if (inp.pressed(IPT_UI_REWIND_SINGLE))
 		machine().rewind_step();
 
 	// handle a toggle cheats request
-	if (machine().ui_input().pressed(IPT_UI_TOGGLE_CHEAT))
+	if (inp.pressed(IPT_UI_TOGGLE_CHEAT))
 		mame_machine_manager::instance()->cheat().set_enable(!mame_machine_manager::instance()->cheat().enabled(), true);
 
 	// toggle MNG recording
-	if (machine().ui_input().pressed(IPT_UI_RECORD_MNG))
+	if (inp.pressed(IPT_UI_RECORD_MNG))
 		machine().video().toggle_record_movie(movie_recording::format::MNG);
 
 	// toggle AVI recording
-	if (machine().ui_input().pressed(IPT_UI_RECORD_AVI))
+	if (inp.pressed(IPT_UI_RECORD_AVI))
 		machine().video().toggle_record_movie(movie_recording::format::AVI);
 
 	// toggle profiler display
-	if (machine().ui_input().pressed(IPT_UI_SHOW_PROFILER))
+	if (inp.pressed(IPT_UI_SHOW_PROFILER))
 		set_show_profiler(!show_profiler());
 
 	// toggle FPS display
-	if (machine().ui_input().pressed(IPT_UI_SHOW_FPS))
+	if (inp.pressed(IPT_UI_SHOW_FPS))
 		set_show_fps(!show_fps());
 
 	// increment frameskip
-	if (machine().ui_input().pressed(IPT_UI_FRAMESKIP_INC))
+	if (inp.pressed(IPT_UI_FRAMESKIP_INC))
 		increase_frameskip();
 
 	// decrement frameskip
-	if (machine().ui_input().pressed(IPT_UI_FRAMESKIP_DEC))
+	if (inp.pressed(IPT_UI_FRAMESKIP_DEC))
 		decrease_frameskip();
 
 	// toggle throttle
-	if (machine().ui_input().pressed(IPT_UI_THROTTLE))
+	if (inp.pressed(IPT_UI_THROTTLE))
 		machine().video().set_throttled(!machine().video().throttled());
 
 	// check for fast forward
@@ -2063,14 +2071,15 @@ std::vector<ui::menu_item> mame_ui_manager::slider_init(running_machine &machine
 	}
 
 	// add screen parameters
-	screen_device_enumerator scriter(machine.root_device());
-	for (screen_device &screen : scriter)
+	video_output_interface_enumerator scriter(machine.root_device());
+	for (device_video_output_interface &screen : scriter)
 	{
-		int defxscale = floorf(screen.xscale() * 1000.0F + 0.5F);
-		int defyscale = floorf(screen.yscale() * 1000.0F + 0.5F);
-		int defxoffset = floorf(screen.xoffset() * 1000.0F + 0.5F);
-		int defyoffset = floorf(screen.yoffset() * 1000.0F + 0.5F);
-		std::string screen_desc = machine_info().get_screen_desc(screen);
+		render_container::user_settings settings = screen.container().get_user_settings();
+		int defxscale = floorf(settings.m_xscale * 1000.0F + 0.5F);
+		int defyscale = floorf(settings.m_yscale * 1000.0F + 0.5F);
+		int defxoffset = floorf(settings.m_xoffset * 1000.0F + 0.5F);
+		int defyoffset = floorf(settings.m_yoffset * 1000.0F + 0.5F);
+		std::string screen_desc = scriter.count() > 1 ? util::string_format(_("Screen '%1$s'"), screen.device().tag()) : _("Screen");
 
 		// add refresh rate tweaker
 		if (machine.options().cheat())
@@ -2121,9 +2130,9 @@ std::vector<ui::menu_item> mame_ui_manager::slider_init(running_machine &machine
 		}
 	}
 
-	for (screen_device &screen : scriter)
+	for (device_video_output_interface &screen : scriter)
 	{
-		if (screen.screen_type() == SCREEN_TYPE_VECTOR)
+		if (screen.is_vector())
 		{
 			// add vector control (FIXME: these should all be per-screen rather than global)
 			slider_alloc(_("Vector Flicker"), 0, 0, 1000, 10, std::bind(&mame_ui_manager::slider_flicker, this, std::ref(screen), _1, _2));
@@ -2309,17 +2318,12 @@ int32_t mame_ui_manager::slider_overclock(device_t &device, std::string *str, in
 //  slider_refresh - refresh rate slider callback
 //-------------------------------------------------
 
-int32_t mame_ui_manager::slider_refresh(screen_device &screen, std::string *str, int32_t newval)
+int32_t mame_ui_manager::slider_refresh(device_video_output_interface &screen, std::string *str, int32_t newval)
 {
-	double defrefresh = ATTOSECONDS_TO_HZ(screen.refresh_attoseconds());
+	double defrefresh = screen.frame_period().as_hz();
 
 	if (newval != SLIDER_NOCHANGE)
-	{
-		int width = screen.width();
-		int height = screen.height();
-		const rectangle &visarea = screen.visible_area();
-		screen.configure(width, height, visarea, HZ_TO_ATTOSECONDS(defrefresh + double(newval) * 0.001));
-	}
+		screen.override_frame_period(attotime::from_hz(defrefresh + double(newval) * 0.001));
 
 	if (str)
 		*str = string_format(_(u8"%1$.3f\u00a0Hz"), screen.frame_period().as_hz());
@@ -2333,7 +2337,7 @@ int32_t mame_ui_manager::slider_refresh(screen_device &screen, std::string *str,
 //  callback
 //-------------------------------------------------
 
-int32_t mame_ui_manager::slider_brightness(screen_device &screen, std::string *str, int32_t newval)
+int32_t mame_ui_manager::slider_brightness(device_video_output_interface &screen, std::string *str, int32_t newval)
 {
 	render_container::user_settings settings = screen.container().get_user_settings();
 	if (newval != SLIDER_NOCHANGE)
@@ -2352,7 +2356,7 @@ int32_t mame_ui_manager::slider_brightness(screen_device &screen, std::string *s
 //  callback
 //-------------------------------------------------
 
-int32_t mame_ui_manager::slider_contrast(screen_device &screen, std::string *str, int32_t newval)
+int32_t mame_ui_manager::slider_contrast(device_video_output_interface &screen, std::string *str, int32_t newval)
 {
 	render_container::user_settings settings = screen.container().get_user_settings();
 	if (newval != SLIDER_NOCHANGE)
@@ -2370,7 +2374,7 @@ int32_t mame_ui_manager::slider_contrast(screen_device &screen, std::string *str
 //  slider_gamma - screen gamma slider callback
 //-------------------------------------------------
 
-int32_t mame_ui_manager::slider_gamma(screen_device &screen, std::string *str, int32_t newval)
+int32_t mame_ui_manager::slider_gamma(device_video_output_interface &screen, std::string *str, int32_t newval)
 {
 	render_container::user_settings settings = screen.container().get_user_settings();
 	if (newval != SLIDER_NOCHANGE)
@@ -2389,7 +2393,7 @@ int32_t mame_ui_manager::slider_gamma(screen_device &screen, std::string *str, i
 //  callback
 //-------------------------------------------------
 
-int32_t mame_ui_manager::slider_xscale(screen_device &screen, std::string *str, int32_t newval)
+int32_t mame_ui_manager::slider_xscale(device_video_output_interface &screen, std::string *str, int32_t newval)
 {
 	render_container::user_settings settings = screen.container().get_user_settings();
 	if (newval != SLIDER_NOCHANGE)
@@ -2408,7 +2412,7 @@ int32_t mame_ui_manager::slider_xscale(screen_device &screen, std::string *str, 
 //  callback
 //-------------------------------------------------
 
-int32_t mame_ui_manager::slider_yscale(screen_device &screen, std::string *str, int32_t newval)
+int32_t mame_ui_manager::slider_yscale(device_video_output_interface &screen, std::string *str, int32_t newval)
 {
 	render_container::user_settings settings = screen.container().get_user_settings();
 	if (newval != SLIDER_NOCHANGE)
@@ -2427,7 +2431,7 @@ int32_t mame_ui_manager::slider_yscale(screen_device &screen, std::string *str, 
 //  slider callback
 //-------------------------------------------------
 
-int32_t mame_ui_manager::slider_xoffset(screen_device &screen, std::string *str, int32_t newval)
+int32_t mame_ui_manager::slider_xoffset(device_video_output_interface &screen, std::string *str, int32_t newval)
 {
 	render_container::user_settings settings = screen.container().get_user_settings();
 	if (newval != SLIDER_NOCHANGE)
@@ -2446,7 +2450,7 @@ int32_t mame_ui_manager::slider_xoffset(screen_device &screen, std::string *str,
 //  slider callback
 //-------------------------------------------------
 
-int32_t mame_ui_manager::slider_yoffset(screen_device &screen, std::string *str, int32_t newval)
+int32_t mame_ui_manager::slider_yoffset(device_video_output_interface &screen, std::string *str, int32_t newval)
 {
 	render_container::user_settings settings = screen.container().get_user_settings();
 	if (newval != SLIDER_NOCHANGE)
@@ -2549,7 +2553,7 @@ int32_t mame_ui_manager::slider_overyoffset(laserdisc_device &laserdisc, std::st
 //  callback
 //-------------------------------------------------
 
-int32_t mame_ui_manager::slider_flicker([[maybe_unused]] screen_device &screen, std::string *str, int32_t newval)
+int32_t mame_ui_manager::slider_flicker([[maybe_unused]] device_video_output_interface &screen, std::string *str, int32_t newval)
 {
 	if (newval != SLIDER_NOCHANGE)
 		vector_options::s_flicker = float(newval) * 0.001F;
@@ -2564,7 +2568,7 @@ int32_t mame_ui_manager::slider_flicker([[maybe_unused]] screen_device &screen, 
 //  callback
 //-------------------------------------------------
 
-int32_t mame_ui_manager::slider_beam_width_min([[maybe_unused]] screen_device &screen, std::string *str, int32_t newval)
+int32_t mame_ui_manager::slider_beam_width_min([[maybe_unused]] device_video_output_interface &screen, std::string *str, int32_t newval)
 {
 	if (newval != SLIDER_NOCHANGE)
 		vector_options::s_beam_width_min = std::min(float(newval) * 0.01F, vector_options::s_beam_width_max);
@@ -2579,7 +2583,7 @@ int32_t mame_ui_manager::slider_beam_width_min([[maybe_unused]] screen_device &s
 //  callback
 //-------------------------------------------------
 
-int32_t mame_ui_manager::slider_beam_width_max([[maybe_unused]] screen_device &screen, std::string *str, int32_t newval)
+int32_t mame_ui_manager::slider_beam_width_max([[maybe_unused]] device_video_output_interface &screen, std::string *str, int32_t newval)
 {
 	if (newval != SLIDER_NOCHANGE)
 		vector_options::s_beam_width_max = std::max(float(newval) * 0.01F, vector_options::s_beam_width_min);
@@ -2594,7 +2598,7 @@ int32_t mame_ui_manager::slider_beam_width_max([[maybe_unused]] screen_device &s
 //  callback
 //-------------------------------------------------
 
-int32_t mame_ui_manager::slider_beam_dot_size([[maybe_unused]] screen_device &screen, std::string *str, int32_t newval)
+int32_t mame_ui_manager::slider_beam_dot_size([[maybe_unused]] device_video_output_interface &screen, std::string *str, int32_t newval)
 {
 	if (newval != SLIDER_NOCHANGE)
 		vector_options::s_beam_dot_size = std::max(float(newval) * 0.01F, 0.1F);
@@ -2609,7 +2613,7 @@ int32_t mame_ui_manager::slider_beam_dot_size([[maybe_unused]] screen_device &sc
 //  callback
 //-------------------------------------------------
 
-int32_t mame_ui_manager::slider_beam_intensity_weight([[maybe_unused]] screen_device &screen, std::string *str, int32_t newval)
+int32_t mame_ui_manager::slider_beam_intensity_weight([[maybe_unused]] device_video_output_interface &screen, std::string *str, int32_t newval)
 {
 	if (newval != SLIDER_NOCHANGE)
 		vector_options::s_beam_intensity_weight = float(newval) * 0.001F;
@@ -2730,7 +2734,13 @@ void mame_ui_manager::save_ui_options()
 	if (!file.open("ui.ini"))
 	{
 		// generate the updated INI
-		file.puts(options().output_ini());
+		{
+			util::owritestream str(file);
+			str.imbue(std::locale::classic());
+
+			options().output_ini(str);
+			str << std::flush;
+		}
 		file.close();
 	}
 	else
@@ -2788,7 +2798,13 @@ void mame_ui_manager::save_main_option()
 		if (!file.open(std::string(emulator_info::get_configname()) + ".ini"))
 		{
 			// generate the updated INI
-			file.puts(options.output_ini());
+			{
+				util::owritestream str(file);
+				str.imbue(std::locale::classic());
+
+				options.output_ini(str);
+				str << std::flush;
+			}
 			file.close();
 		}
 		else

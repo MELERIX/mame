@@ -45,6 +45,7 @@ public:
 	}
 
 	uint8_t sam_read(offs_t offset);
+	void vdg_flush(int state);
 
 	void horizontal_sync(int state);
 	void field_sync(int state);
@@ -63,7 +64,7 @@ protected:
 	void configure_sam();
 
 	// PIA1
-	virtual void pia1_pb_changed(uint8_t data) override;
+	virtual void pia1_pb_w(uint8_t data) override;
 
 	sam6883_device &sam() { return *m_sam; }
 	required_device<sam6883_device> m_sam;

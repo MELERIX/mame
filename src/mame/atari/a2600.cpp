@@ -607,12 +607,12 @@ void a2600_base_state::a2600_base_ntsc(machine_config &config)
 	m_maincpu->set_addrmap(AS_PROGRAM, &a2600_base_state::a2600_mem);
 
 	/* video hardware */
-	TIA_NTSC_VIDEO(config, m_tia, 0, "tia");
+	TIA_NTSC_VIDEO(config, m_tia, "tia");
 	m_tia->read_input_port_callback().set(FUNC(a2600_state::a2600_read_input_port));
 	m_tia->databus_contents_callback().set(FUNC(a2600_state::a2600_get_databus_contents));
 	m_tia->vsync_callback().set(FUNC(a2600_state::a2600_tia_vsync_callback));
 
-	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
+	SCREEN(config, m_screen);
 	m_screen->set_raw(m_xtal, 228, 26, 26 + 160 + 16, 262, 24 , 24 + 192 + 31);
 	m_screen->set_screen_update("tia_video", FUNC(tia_video_device::screen_update));
 
@@ -640,12 +640,12 @@ void a2600_base_state::a2600_base_pal(machine_config &config)
 	m_maincpu->set_addrmap(AS_PROGRAM, &a2600_state::a2600_mem);
 
 	/* video hardware */
-	TIA_PAL_VIDEO(config, m_tia, 0, "tia");
+	TIA_PAL_VIDEO(config, m_tia, "tia");
 	m_tia->read_input_port_callback().set(FUNC(a2600_state::a2600_read_input_port));
 	m_tia->databus_contents_callback().set(FUNC(a2600_state::a2600_get_databus_contents));
 	m_tia->vsync_callback().set(FUNC(a2600_state::a2600_tia_vsync_callback));
 
-	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
+	SCREEN(config, m_screen);
 	m_screen->set_raw(m_xtal, 228, 26, 26 + 160 + 16, 312, 32, 32 + 228 + 31);
 	m_screen->set_screen_update("tia_video", FUNC(tia_video_device::screen_update));
 

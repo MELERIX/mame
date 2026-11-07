@@ -303,6 +303,8 @@ G)ame Connector, dual row 50 pins
 #include "screen.h"
 #include "tilemap.h"
 
+#include "endianness.h"
+
 
 #define LOG_TLCS_TO_PPC_COMMANDS (1U << 1)
 #define LOG_PPC_TO_TLCS_COMMANDS (1U << 2)
@@ -1059,7 +1061,7 @@ void taitopjc_state::taitopjc(machine_config &config)
 
 	NVRAM(config, "nvram", nvram_device::DEFAULT_ALL_0);
 
-	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_RASTER));
+	screen_device &screen(SCREEN(config, "screen"));
 	// V 0x1be / 0x14 / 0x194 / 0x1a8 / 0x1be
 	// H 0x294 / 0x3f / 0x221 / 0x24c / 0x294
 	// TODO: gets a 56.17 Hz with this, may be off by 1 or 2, verify on PCB, fix display ranges
@@ -1071,7 +1073,7 @@ void taitopjc_state::taitopjc(machine_config &config)
 	PALETTE(config, m_palette).set_format(palette_device::xBGR_888, 32768);
 	GFXDECODE(config, m_gfxdecode, m_palette, gfxdecode_device::empty);
 
-	TC0780FPA(config, m_tc0780fpa, 0);
+	TC0780FPA(config, m_tc0780fpa);
 }
 
 
@@ -1079,7 +1081,7 @@ void taitopjc_state::init_optiger()
 {
 	uint8_t *rom = (uint8_t*)memregion("iocpu")->base();
 
-	// skip sound check
+	// HACK: skip sound check
 	rom[BYTE_XOR_LE(0x217)] = 0x00;
 	rom[BYTE_XOR_LE(0x218)] = 0x00;
 

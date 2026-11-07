@@ -271,7 +271,6 @@ u32 scudhamm_state::screen_update(screen_device &screen, bitmap_ind16 &bitmap, c
 
 void scudhamm_state::machine_start()
 {
-	m_leds.resolve();
 	m_scudhamm_motor_command = 0;
 
 	save_item(NAME(m_prev));
@@ -523,9 +522,6 @@ void captflag_state::machine_start()
 	m_oki_bank[1]->configure_entries(0, 0x100000 / 0x20000, memregion("oki2")->base(), 0x20000);
 	m_oki_bank[0]->set_entry(1);
 	m_oki_bank[1]->set_entry(1);
-
-	m_motor_left_output.resolve();
-	m_motor_right_output.resolve();
 
 	save_item(NAME(m_captflag_leds));
 	save_item(NAME(m_motor_command));
@@ -1110,7 +1106,7 @@ void scudhamm_state::scudhamm(machine_config &config)
 	WATCHDOG_TIMER(config, m_watchdog);
 
 	/* video hardware */
-	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
+	SCREEN(config, m_screen);
 	m_screen->set_video_attributes(VIDEO_UPDATE_AFTER_VBLANK);
 	// measured values for Arm Champs II: VSync: 59.1784Hz, HSync: 15082.0 kHz
 	m_screen->set_raw(XTAL(12'000'000)/2,396,0,256,256,16,240);
@@ -1209,7 +1205,7 @@ void captflag_state::captflag(machine_config &config)
 	NVRAM(config, "nvram", nvram_device::DEFAULT_ALL_0);
 
 	/* video hardware */
-	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
+	SCREEN(config, m_screen);
 //  m_screen->set_video_attributes(VIDEO_UPDATE_AFTER_VBLANK);
 	m_screen->set_refresh_hz(30); //TODO: wrong!
 //  m_screen->set_vblank_time(ATTOSECONDS_IN_USEC(2500 * 3) /* not accurate */);

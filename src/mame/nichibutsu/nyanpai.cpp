@@ -557,7 +557,7 @@ void nyanpai_state::nyanpai(machine_config &config)
 	NVRAM(config, "nvram", nvram_device::DEFAULT_ALL_0);
 
 	/* video hardware */
-	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
+	SCREEN(config, m_screen);
 	m_screen->set_refresh_hz(60);
 	m_screen->set_vblank_time(ATTOSECONDS_IN_USEC(0));
 	m_screen->set_size(1024, 512);
@@ -571,7 +571,7 @@ void nyanpai_state::nyanpai(machine_config &config)
 	/* sound hardware */
 	SPEAKER(config, "speaker").front_center();
 
-	nichisnd_device &nichisnd(NICHISND(config, "nichisnd", 0));
+	nichisnd_device &nichisnd(NICHISND(config, "nichisnd"));
 	nichisnd.add_route(ALL_OUTPUTS, "speaker", 1.0);
 }
 

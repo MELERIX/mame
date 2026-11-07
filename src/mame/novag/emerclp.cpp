@@ -53,7 +53,7 @@ There's also a newer version with a H8/3687 MCU.
 #include "sound/dac.h"
 #include "video/pwm.h"
 
-#include "screen.h"
+#include "screen_svg.h"
 #include "speaker.h"
 
 #include <bit>
@@ -79,16 +79,17 @@ public:
 		m_out_lcd(*this, "s%u.%u", 0U, 0U)
 	{ }
 
-	template <typename T> void cpu_config(T &maincpu);
-	void shared(machine_config &config);
-	void emerclp(machine_config &config);
-	void obsidian(machine_config &config);
+	void emerclp(machine_config &config) ATTR_COLD;
+	void obsidian(machine_config &config) ATTR_COLD;
 
 	DECLARE_INPUT_CHANGED_MEMBER(power_switch);
 
 protected:
 	virtual void machine_start() override ATTR_COLD;
 	virtual void machine_reset() override ATTR_COLD { set_power(true); }
+
+	template <typename T> void cpu_config(T &maincpu) ATTR_COLD;
+	void shared(machine_config &config) ATTR_COLD;
 
 private:
 	// devices/pointers
@@ -123,8 +124,6 @@ private:
 
 void emerclp_state::machine_start()
 {
-	m_out_lcd.resolve();
-
 	// register for savestates
 	save_item(NAME(m_power));
 	save_item(NAME(m_inp_mux));
@@ -325,10 +324,9 @@ void emerclp_state::shared(machine_config &config)
 	PWM_DISPLAY(config, m_lcd_pwm).set_size(4, 16);
 	m_lcd_pwm->output_x().set(FUNC(emerclp_state::lcd_pwm_w));
 
-	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_SVG));
+	screen_svg_device &screen(SCREEN_SVG(config, "screen"));
 	screen.set_refresh_hz(60);
 	screen.set_size(1920/5, 671/5);
-	screen.set_visarea_full();
 
 	PWM_DISPLAY(config, m_led_pwm).set_size(2, 8);
 

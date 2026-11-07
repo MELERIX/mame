@@ -250,11 +250,11 @@ void clownmgc_state::clownmgc(machine_config &config)
 
 	NVRAM(config, "nvram", nvram_device::DEFAULT_ALL_0);
 
-	NS16550(config, "uart", 0); // TODO: clock
+	NS16550(config, "uart"); // TODO: clock
 
 	HOPPER(config, m_hopper, attotime::from_msec(100));
 
-	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
+	SCREEN(config, m_screen);
 	m_screen->set_refresh_hz(60);
 	m_screen->set_vblank_time(ATTOSECONDS_IN_USEC(2500));
 	m_screen->set_size(64*8, 64*8);

@@ -479,7 +479,7 @@ void malzak_state::malzak(machine_config &config)
 	m_maincpu->sense_handler().set(m_screen, FUNC(screen_device::vblank));
 
 	/* video hardware */
-	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
+	SCREEN(config, m_screen);
 	m_screen->set_video_attributes(VIDEO_ALWAYS_UPDATE);
 	// TODO: handtuned, unverified
 	m_screen->set_raw(6'000'000 * 4, 768, 0, 80 * 6, 312 * 2, 0, 240 * 2);
@@ -488,11 +488,11 @@ void malzak_state::malzak(machine_config &config)
 	GFXDECODE(config, m_gfxdecode, m_palette, gfx_malzak);
 	PALETTE(config, m_palette, FUNC(malzak_state::palette_init), 128);
 
-	S2636(config, m_s2636[0], 0);
+	S2636(config, m_s2636[0]);
 	m_s2636[0]->set_offsets(0, -16);  // -8, -16
 	m_s2636[0]->add_route(ALL_OUTPUTS, "mono", 0.25);
 
-	S2636(config, m_s2636[1], 0);
+	S2636(config, m_s2636[1]);
 	m_s2636[1]->set_offsets(0, -16);  // -9, -16
 	m_s2636[1]->add_route(ALL_OUTPUTS, "mono", 0.25);
 

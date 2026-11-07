@@ -36,7 +36,7 @@ Dumped games:                           ROMs:    Video:
 
 --------------------------------------------------------------------------------------
 
-To Do:
+TODO:
 
 - Remove ROM patches: gegege checks the EEPROM output after reset, and wants a timed 0->1 transition or locks up while
   saving setting in service mode. Using a reset_delay of 7 works, unless when "play style" is set
@@ -83,7 +83,6 @@ public:
 		, m_buffered_spriteram(*this, "spriteram")
 		, m_spriteram(*this, "spriteram")
 		, m_leds(*this, "led%u", 0U)
-		, m_vblank(0)
 	{ }
 
 	void sigmab98(machine_config &config) ATTR_COLD;
@@ -97,8 +96,6 @@ public:
 	void init_ucytokyu() ATTR_COLD;
 
 protected:
-	virtual void machine_start() override ATTR_COLD { m_leds.resolve(); }
-
 	void c4_w(u8 data);
 	void c6_w(u8 data);
 	void c8_w(u8 data);
@@ -111,6 +108,7 @@ protected:
 	u8 d021_r();
 
 	INTERRUPT_GEN_MEMBER(sigmab98_vblank_interrupt);
+	IRQ_CALLBACK_MEMBER(cpu_acknowledge_irq);
 
 	u32 screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 
@@ -139,7 +137,7 @@ protected:
 	u8 m_c4 = 0;
 	u8 m_c6 = 0;
 	u8 m_c8 = 0;
-	u8 m_vblank;
+	u8 m_irq_vector = 0;
 };
 
 
@@ -193,28 +191,14 @@ private:
 
 u32 sigmab98_state::screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect)
 {
-	int layers_ctrl = -1;
-
-#ifdef MAME_DEBUG
-	if (machine().input().code_pressed(KEYCODE_Z))
-	{
-		int msk = 0;
-		if (machine().input().code_pressed(KEYCODE_Q))  msk |= 1;
-		if (machine().input().code_pressed(KEYCODE_W))  msk |= 2;
-		if (machine().input().code_pressed(KEYCODE_E))  msk |= 4;
-		if (machine().input().code_pressed(KEYCODE_R))  msk |= 8;
-		if (msk != 0) layers_ctrl &= msk;
-	}
-#endif
-
 	bitmap.fill(m_palette->pens()[0x1000], cliprect);
 
 	// Draw from priority 3 (bottom, converted to a bitmask) to priority 0 (top)
-	u8* spriteram = (m_buffered_spriteram ? m_buffered_spriteram->buffer() : m_spriteram);
-	m_spritegen->draw_sprites(bitmap, cliprect, spriteram, layers_ctrl & 8);
-	m_spritegen->draw_sprites(bitmap, cliprect, spriteram, layers_ctrl & 4);
-	m_spritegen->draw_sprites(bitmap, cliprect, spriteram, layers_ctrl & 2);
-	m_spritegen->draw_sprites(bitmap, cliprect, spriteram, layers_ctrl & 1);
+	u8 const *spriteram = (m_buffered_spriteram ? m_buffered_spriteram->buffer() : m_spriteram);
+	m_spritegen->draw_sprites(bitmap, cliprect, spriteram, 8);
+	m_spritegen->draw_sprites(bitmap, cliprect, spriteram, 4);
+	m_spritegen->draw_sprites(bitmap, cliprect, spriteram, 2);
+	m_spritegen->draw_sprites(bitmap, cliprect, spriteram, 1);
 
 	return 0;
 }
@@ -629,7 +613,13 @@ INPUT_PORTS_END
 
 INTERRUPT_GEN_MEMBER(sigmab98_state::sigmab98_vblank_interrupt)
 {
-	device.execute().set_input_line_and_vector(0, HOLD_LINE, 0x5a); // Z80
+	m_irq_vector = 0x5a;
+	m_maincpu->set_input_line(0, HOLD_LINE);
+}
+
+IRQ_CALLBACK_MEMBER(sigmab98_state::cpu_acknowledge_irq)
+{
+	return m_irq_vector;
 }
 
 void sigmab98_state::sigmab98(machine_config &config)
@@ -638,6 +628,7 @@ void sigmab98_state::sigmab98(machine_config &config)
 	m_maincpu->set_addrmap(AS_PROGRAM, &sigmab98_state::gegege_mem_map);
 	m_maincpu->set_addrmap(AS_IO, &sigmab98_state::gegege_io_map);
 	m_maincpu->set_vblank_int("screen", FUNC(sigmab98_state::sigmab98_vblank_interrupt));
+	m_maincpu->set_irq_acknowledge_callback(FUNC(sigmab98_state::cpu_acknowledge_irq));
 
 	NVRAM(config, "nvram", nvram_device::DEFAULT_ALL_0);
 	EEPROM_93C46_16BIT(config, "eeprom");
@@ -645,7 +636,7 @@ void sigmab98_state::sigmab98(machine_config &config)
 	TICKET_DISPENSER(config, m_hopper, attotime::from_msec(200));
 
 	// video hardware
-	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
+	SCREEN(config, m_screen);
 	m_screen->set_refresh_hz(60);                    // ?
 	m_screen->set_vblank_time(ATTOSECONDS_IN_USEC(2500) /* not accurate */);   // game reads vblank state
 	m_screen->set_size(0x140, 0x100);
@@ -658,7 +649,7 @@ void sigmab98_state::sigmab98(machine_config &config)
 
 	BUFFERED_SPRITERAM8(config, m_buffered_spriteram);
 
-	KY3211(config, m_spritegen, 0, m_palette);
+	KY3211(config, m_spritegen, m_palette);
 
 	// sound hardware
 	SPEAKER(config, "speaker", 2).front();
@@ -682,25 +673,37 @@ void sigmab98_state::dodghero(machine_config &config)
 
 TIMER_DEVICE_CALLBACK_MEMBER(lufykzku_state::lufykzku_irq)
 {
-	const int scanline = param;
-
-	if (scanline == 240)
+	if (param == 240)
 	{
-		if (m_vblank_vector) m_maincpu->set_input_line_and_vector(0, HOLD_LINE, m_vblank_vector); // Z80
+		if (m_vblank_vector)
+		{
+			m_irq_vector = m_vblank_vector;
+			m_maincpu->set_input_line(0, HOLD_LINE);
+		}
 	}
-	else if (scanline == 128)
+	else if (param == 128)
 	{
-		if (m_timer0_vector) m_maincpu->set_input_line_and_vector(0, HOLD_LINE, m_timer0_vector); // Z80
+		if (m_timer0_vector)
+		{
+			m_irq_vector = m_timer0_vector;
+			m_maincpu->set_input_line(0, HOLD_LINE);
+		}
 	}
-	else if ((scanline % 8) == 0)
+	else if ((param % 8) == 0)
 	{
-		if (m_timer1_vector) m_maincpu->set_input_line_and_vector(0, HOLD_LINE, m_timer1_vector); // Z80 - this needs to be called often or the state of the door is not read at boot (at least 5 times before bb9 is called)
+		if (m_timer1_vector)
+		{
+			// this needs to be called often or the state of the door is not read at boot (at least 5 times before bb9 is called)
+			m_irq_vector = m_timer1_vector;
+			m_maincpu->set_input_line(0, HOLD_LINE);
+		}
 	}
 }
 
 TIMER_DEVICE_CALLBACK_MEMBER(lufykzku_state::mnrockman_timer_irq)
 {
-	m_maincpu->set_input_line_and_vector(0, HOLD_LINE, 0xfc);
+	m_irq_vector = 0xfc;
+	m_maincpu->set_input_line(0, HOLD_LINE);
 }
 
 void lufykzku_state::lufykzku(machine_config &config)
@@ -709,11 +712,12 @@ void lufykzku_state::lufykzku(machine_config &config)
 	m_maincpu->set_addrmap(AS_PROGRAM, &lufykzku_state::lufykzku_mem_map);
 	m_maincpu->set_addrmap(AS_IO, &lufykzku_state::lufykzku_io_map);
 	TIMER(config, "scantimer").configure_scanline(FUNC(lufykzku_state::lufykzku_irq), "screen", 0, 1);
+	m_maincpu->set_irq_acknowledge_callback(FUNC(lufykzku_state::cpu_acknowledge_irq));
 
 	NVRAM(config, "nvram", nvram_device::DEFAULT_ALL_0);   // battery backed RAM (TC55257DFL-70L)
 	// No EEPROM
 
-	MB3773(config, m_watchdog, 0);
+	MB3773(config, m_watchdog);
 	TICKET_DISPENSER(config, m_hopper, attotime::from_msec(200));
 
 	// 2 x 8-bit parallel/serial converters
@@ -726,7 +730,7 @@ void lufykzku_state::lufykzku(machine_config &config)
 	m_dsw_shifter[1]->qh_callback().set(FUNC(lufykzku_state::dsw_w));
 
 	// video hardware
-	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
+	SCREEN(config, m_screen);
 	m_screen->set_refresh_hz(60);                    // ?
 	m_screen->set_vblank_time(ATTOSECONDS_IN_USEC(2500) /* not accurate */);   // game reads vblank state
 	m_screen->set_size(0x140, 0x100);
@@ -738,7 +742,7 @@ void lufykzku_state::lufykzku(machine_config &config)
 	m_palette->set_endianness(ENDIANNESS_BIG);
 
 	//BUFFERED_SPRITERAM8(config, m_buffered_spriteram); // same as sammymdl?
-	KY10510(config, m_spritegen, 0, m_palette);
+	KY10510(config, m_spritegen, m_palette);
 
 	// sound hardware
 	SPEAKER(config, "speaker", 2).front();
@@ -856,7 +860,7 @@ void sigmab98_state::init_gegege()
 //  rom[0x0dec] = 0x00;
 //  rom[0x0ded] = 0x00;
 
-	// EEPROM timing checks
+	// HACK: EEPROM timing checks
 	rom[0x8138] = 0x00;
 	rom[0x8139] = 0x00;
 
@@ -886,7 +890,7 @@ void sigmab98_state::init_b3rinsya()
 {
 	u8 *rom = memregion("maincpu")->base();
 
-	// EEPROM timing checks
+	// HACK: EEPROM timing checks
 	rom[0x8138] = 0x00;
 	rom[0x8139] = 0x00;
 
@@ -924,7 +928,7 @@ void sigmab98_state::init_pepsiman()
 //  rom[0xa00e] = 0x00;
 //  rom[0xa00f] = 0x00;
 
-	// EEPROM timing checks
+	// HACK: EEPROM timing checks
 	rom[0x8138] = 0x00;
 	rom[0x8139] = 0x00;
 
@@ -956,7 +960,7 @@ void sigmab98_state::init_tbeastw2()
 {
 	u8 *rom = memregion("maincpu")->base();
 
-	// EEPROM timing checks
+	// HACK: EEPROM timing checks
 	rom[0x8138] = 0x00;
 	rom[0x8139] = 0x00;
 
@@ -996,7 +1000,7 @@ void sigmab98_state::init_ucytokyu()
 //  rom[0xa43a] = 0x00;
 //  rom[0xa43b] = 0x00;
 
-	// EEPROM timing checks
+	// HACK: EEPROM timing checks
 	rom[0x8138] = 0x00;
 	rom[0x8139] = 0x00;
 
@@ -1027,7 +1031,7 @@ void sigmab98_state::init_dashhero()
 {
 	u8 *rom = memregion("maincpu")->base();
 
-	// EEPROM timing checks
+	// HACK: EEPROM timing checks
 	rom[0x8138] = 0x00;
 	rom[0x8139] = 0x00;
 

@@ -508,10 +508,6 @@ void bishi_state::machine_start()
 {
 	save_item(NAME(m_cur_control));
 	save_item(NAME(m_cur_control2));
-	m_red_button_lamps.resolve();
-	m_green_button_lamps.resolve();
-	m_blue_button_lamps.resolve();
-	m_start_button_lamps.resolve();
 }
 
 void bishi_state::machine_reset()
@@ -531,7 +527,7 @@ void bishi_state::bishi(machine_config &config)
 	TIMER(config, "scantimer").configure_scanline(FUNC(bishi_state::scanline), "screen", 0, 1);
 
 	/* video hardware */
-	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
+	SCREEN(config, m_screen);
 	m_screen->set_video_attributes(VIDEO_UPDATE_AFTER_VBLANK);
 	m_screen->set_refresh_hz(60);
 	m_screen->set_vblank_time(ATTOSECONDS_IN_USEC(1200));
@@ -551,7 +547,7 @@ void bishi_state::bishi(machine_config &config)
 	K054338(config, m_k054338, 0);
 	// FP 201404: any reason why this is not connected to the k055555 below?
 
-	K055555(config, m_k055555, 0);
+	K055555(config, m_k055555);
 
 	/* sound hardware */
 	SPEAKER(config, "speaker", 2).front();

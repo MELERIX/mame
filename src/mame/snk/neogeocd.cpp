@@ -1072,9 +1072,9 @@ uint32_t ngcd_state::screen_update(screen_device &screen, bitmap_rgb32 &bitmap, 
 	// fill with background color first
 	bitmap.fill(*m_bg_pen, cliprect);
 
-	if (m_has_sprite_bus) m_sprgen->draw_sprites(bitmap, cliprect.min_y);
+	if (m_has_sprite_bus) m_sprgen->draw_sprites(bitmap, cliprect.top());
 
-	if (m_has_text_bus) m_sprgen->draw_fixed_layer(bitmap, cliprect.min_y);
+	if (m_has_text_bus) m_sprgen->draw_fixed_layer(bitmap, cliprect.top());
 
 	return 0;
 }
@@ -1097,7 +1097,7 @@ void ngcd_state::neocd_ntsc(machine_config &config)
 	m_screen->set_screen_update(FUNC(ngcd_state::screen_update));
 
 	// temporary until things are cleaned up
-	LC89510_TEMP(config, m_tempcdc, 0); // cd controller
+	LC89510_TEMP(config, m_tempcdc); // cd controller
 	m_tempcdc->set_cdrom_tag("cdrom");
 	m_tempcdc->set_is_neoCD(true);
 	m_tempcdc->set_type1_interrupt_callback(FUNC(ngcd_state::interrupt_callback_type1));

@@ -20,7 +20,7 @@ As of 2/12/2001 the latest software levels:
 
 Game Title       Level  Released
 ----------------------------------
-Cruis'n Exotica  v2.4   08/23/2000
+Cruis'n Exotica  v2.4   08/31/2000
 Invasion         v5.0   12/14/1999
 The Grid         v1.2   10/18/2000
 
@@ -76,7 +76,7 @@ protected:
 		, m_io_keypad(*this, "KEYPAD")
 	{ }
 
-	virtual void machine_start() override
+	virtual void machine_start() override ATTR_COLD
 	{
 		midzeus_state::machine_start();
 
@@ -88,7 +88,7 @@ protected:
 		save_item(NAME(m_fw_int));
 	}
 
-	virtual void machine_reset() override
+	virtual void machine_reset() override ATTR_COLD
 	{
 		midzeus_state::machine_reset();
 
@@ -97,7 +97,10 @@ protected:
 		m_fw_int = 0;
 	}
 
-	virtual void video_start() override {}
+	virtual void video_start() override ATTR_COLD {}
+
+	// vsync comes from the Zeus 2 device, not the driver
+	virtual void rearm_vsync() override { }
 
 	uint32_t disk_asic_r(offs_t offset);
 	void disk_asic_w(offs_t offset, uint32_t data);
@@ -139,18 +142,14 @@ public:
 		, m_io_analog(*this, "ANALOG%u", 0U)
 	{ }
 
-	void crusnexo(machine_config &config);
+	void crusnexo(machine_config &config) ATTR_COLD;
 
 	ioport_value keypad_r();
 
 protected:
-	virtual void machine_start() override
+	virtual void machine_start() override ATTR_COLD
 	{
 		midzeus2_state::machine_start();
-
-		m_digits.resolve();
-		m_leds.resolve();
-		m_lamps.resolve();
 
 		save_item(NAME(m_keypad_select));
 		save_item(NAME(m_crusnexo_leds_select));
@@ -215,7 +214,7 @@ void midzeus_state::machine_start()
 	m_timer[0] = machine().scheduler().timer_alloc(timer_expired_delegate());
 	m_timer[1] = machine().scheduler().timer_alloc(timer_expired_delegate());
 
-	m_display_irq_off_timer = timer_alloc(FUNC(midzeus_state::display_irq_off), this);
+	m_vsync_start_timer = timer_alloc(FUNC(midzeus_state::vsync_start), this);
 
 	save_item(NAME(m_disk_asic_jr));
 	save_item(NAME(m_cmos_protected));
@@ -244,25 +243,47 @@ void midzeus_state::machine_reset()
 	m_cmos_protected = true;
 	memset(m_disk_asic_jr, 0x0, 0x10 * 4);
 	m_disk_asic_jr[6] = 0xa0; // Rev3 Athens
+
+	rearm_vsync();
 }
 
 
 
 /*************************************
  *
- *  Display interrupt generation
+ *  Vertical sync generation
  *
  *************************************/
 
-TIMER_CALLBACK_MEMBER(midzeus_state::display_irq_off)
+// Vertical sync is reg 0xC8's high half, not the end of active video.  mk4 and invasn test the line
+// counter for equality with 256, so raising the interrupt there loses the background.
+attotime midzeus_state::time_until_vsync() const
 {
-	m_maincpu->set_input_line(TMS320C3X_IRQ0, CLEAR_LINE);
+	uint32_t const line = m_zeusbase[0xc8] >> 16;
+	if (line > m_screen->visible_area().max_y && line < m_screen->height())
+		return m_screen->time_until_pos(line);
+	return m_screen->time_until_vblank_start();
 }
 
-INTERRUPT_GEN_MEMBER(midzeus_state::display_irq)
+// Vertical sync in, IRQ0 out, for both generations.  IRQ0 is level-sensitive with ST bit 14 clear,
+// so holding it re-enters the handler and a zero-width pulse is not allowed; two clocks is the
+// width the driver's own off-timer used.
+void midzeus_state::vsync_changed(int state)
 {
-	m_maincpu->set_input_line(TMS320C3X_IRQ0, ASSERT_LINE);
-	m_display_irq_off_timer->adjust(attotime::from_hz(30000000));
+	if (state)
+		m_maincpu->pulse_input_line(TMS320C3X_IRQ0, m_maincpu->clocks_to_attotime(2));
+}
+
+// Zeus 1's vsync generator; Zeus 2 has one in the device, so midzeus2_state overrides this away.
+void midzeus_state::rearm_vsync()
+{
+	m_vsync_start_timer->adjust(time_until_vsync());
+}
+
+TIMER_CALLBACK_MEMBER(midzeus_state::vsync_start)
+{
+	vsync_changed(ASSERT_LINE);
+	rearm_vsync();
 }
 
 void midzeus2_state::zeus_irq(int state)
@@ -625,10 +646,11 @@ uint32_t midzeus_state::tms320c32_control_r(offs_t offset)
 	// watch for accesses to the timers
 	if (offset == 0x24 || offset == 0x34)
 	{
-		// timer is clocked at 100ns
+		// CLKSRC in the timer's control register selects the internal clock, H1/2 = CLKIN/4;
+		// the external TCLK rate is unknown, so keep the 100ns the driver has always assumed
 		int const which = (offset >> 4) & 1;
-		int32_t const result = (m_timer[which]->elapsed() * 10000000).as_double();
-		return result;
+		uint32_t const rate = BIT(m_tms320c32_control[offset - 4], 9) ? m_maincpu->unscaled_clock() / 4 : 10000000;
+		return m_timer[which]->elapsed().as_ticks(rate);
 	}
 
 	// log anything else except the memory control register
@@ -1174,7 +1196,7 @@ static INPUT_PORTS_START( crusnexo )
 	PORT_DIPNAME( 0x0400, 0x0400, DEF_STR( Cabinet ) )
 	PORT_DIPSETTING(      0x0400, "Stand Up" )
 	PORT_DIPSETTING(      0x0000, "Sit Down" )
-	PORT_DIPNAME( 0x0800, 0x0800, "Wheel Invert" )
+	PORT_DIPNAME( 0x0800, 0x0800, "Invert Wheel Force Feedback/Shifter Polarity" )
 	PORT_DIPSETTING(      0x0800, DEF_STR( Off ) )
 	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
 	PORT_DIPNAME( 0x1000, 0x1000, "ROM Configuration" ) // Manual lists this dip as Unused
@@ -1386,14 +1408,13 @@ void midzeus_state::midzeus(machine_config &config)
 	// basic machine hardware
 	TMS320C32(config, m_maincpu, 60_MHz_XTAL);
 	m_maincpu->set_addrmap(AS_PROGRAM, &midzeus_state::zeus_map);
-	m_maincpu->set_vblank_int("screen", FUNC(midzeus_state::display_irq));
 
 	NVRAM(config, "nvram", nvram_device::DEFAULT_ALL_1);
 
 	// video hardware
 	PALETTE(config, m_palette, palette_device::RGB_555);
 
-	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
+	SCREEN(config, m_screen);
 	m_screen->set_raw(MIDZEUS_VIDEO_CLOCK / 8, 529, 0, 400, 278, 0, 256);
 	m_screen->set_screen_update(FUNC(midzeus_state::screen_update));
 	m_screen->set_palette(m_palette);
@@ -1401,12 +1422,12 @@ void midzeus_state::midzeus(machine_config &config)
 	// sound hardware
 	SPEAKER(config, "speaker", 2).front();
 
-	dcs2_audio_2104_device &dcs(DCS2_AUDIO_2104(config, "dcs", 0));
+	dcs2_audio_2104_device &dcs(DCS2_AUDIO_2104(config, "dcs"));
 	dcs.set_maincpu_tag(m_maincpu);
 	dcs.add_route(0, "speaker", 1.0, 1);
 	dcs.add_route(1, "speaker", 1.0, 0);
 
-	MIDWAY_IOASIC(config, m_ioasic, 0);
+	MIDWAY_IOASIC(config, m_ioasic);
 	m_ioasic->in_port_cb<0>().set_ioport("DIPS");
 	m_ioasic->in_port_cb<1>().set_ioport("SYSTEM");
 	m_ioasic->in_port_cb<2>().set_ioport("IN1");
@@ -1437,30 +1458,30 @@ void midzeus2_state::midzeus2(machine_config &config)
 	// basic machine hardware
 	TMS320C32(config, m_maincpu, 60_MHz_XTAL);
 	m_maincpu->set_addrmap(AS_PROGRAM, &midzeus2_state::zeus2_map);
-	m_maincpu->set_vblank_int("screen", FUNC(midzeus2_state::display_irq));
 
 	NVRAM(config, "nvram", nvram_device::DEFAULT_ALL_1);
 
 	// video hardware
-	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
+	SCREEN(config, m_screen);
 	m_screen->set_raw(ZEUS2_VIDEO_CLOCK / 4, 666, 0, 512, 438, 0, 400);
 	m_screen->set_screen_update(m_zeus, FUNC(zeus2_device::screen_update));
 
 	ZEUS2(config, m_zeus, ZEUS2_VIDEO_CLOCK);
+	m_zeus->vsync_callback().set(FUNC(midzeus2_state::vsync_changed));
 	m_zeus->irq_callback().set(FUNC(midzeus2_state::zeus_irq));
 
 	// sound hardware
 	SPEAKER(config, "speaker", 2).front();
 
-	dcs2_audio_2104_device &dcs(DCS2_AUDIO_2104(config, "dcs", 0));
+	dcs2_audio_2104_device &dcs(DCS2_AUDIO_2104(config, "dcs"));
 	dcs.set_maincpu_tag(m_maincpu);
 	dcs.add_route(0, "speaker", 1.0, 1);
 	dcs.add_route(1, "speaker", 1.0, 0);
 
-	M48T35(config, m_m48t35, 0);
+	M48T35(config, m_m48t35);
 
 	// I/O hardware
-	MIDWAY_IOASIC(config, m_ioasic, 0);
+	MIDWAY_IOASIC(config, m_ioasic);
 	m_ioasic->in_port_cb<0>().set_ioport("DIPS");
 	m_ioasic->in_port_cb<1>().set_ioport("SYSTEM");
 	m_ioasic->in_port_cb<2>().set_ioport("IN1");
@@ -1470,10 +1491,10 @@ void midzeus2_state::midzeus2(machine_config &config)
 	m_ioasic->set_yearoffs(99);
 	m_ioasic->set_upper(474);
 
-	IBM21S851(config, m_fw_phy, 0);
+	IBM21S851(config, m_fw_phy);
 	m_fw_phy->reset_cb().set(m_fw_link, FUNC(tsb12lv01a_device::phy_reset_w));
 
-	TSB12LV01A(config, m_fw_link, 0);
+	TSB12LV01A(config, m_fw_link);
 	m_fw_link->int_cb().set(FUNC(midzeus2_state::firewire_irq));
 	m_fw_link->phy_read().set(m_fw_phy, FUNC(ibm21s851_device::read));
 	m_fw_link->phy_write().set(m_fw_phy, FUNC(ibm21s851_device::write));

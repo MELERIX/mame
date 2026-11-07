@@ -157,11 +157,11 @@ void haplucky_state::haplucky(machine_config &config)
 	audiocpu.set_addrmap(AS_PROGRAM, &haplucky_state::sound_map);
 	audiocpu.set_addrmap(AS_IO, &haplucky_state::sound_io_map);
 
-	i8255_device &ppi(I8255(config, "ppi", 0)); // M5L8255AP-5
+	i8255_device &ppi(I8255(config, "ppi")); // M5L8255AP-5
 	ppi.in_pc_callback().set_ioport("IN0");
 
 	// video hardware
-	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_RASTER)); // TODO: everything to be verified
+	screen_device &screen(SCREEN(config, "screen")); // TODO: everything to be verified
 	screen.set_refresh_hz(60);
 	screen.set_vblank_time(ATTOSECONDS_IN_USEC(0));
 	screen.set_size(32*8, 32*8);
@@ -209,4 +209,4 @@ ROM_END
 } // anonymous namespace
 
 
-GAME( 1985, haplucky, 0, haplucky, haplucky, haplucky_state, empty_init, ROT0, "Taito Corporation", "Happy Lucky!", MACHINE_NO_SOUND | MACHINE_NOT_WORKING )
+GAME( 1985, haplucky, 0, haplucky, haplucky, haplucky_state, empty_init, ROT0, "Taito", "Happy Lucky!", MACHINE_NO_SOUND | MACHINE_NOT_WORKING )

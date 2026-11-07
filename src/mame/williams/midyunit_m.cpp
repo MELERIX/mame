@@ -487,8 +487,7 @@ void midyunit_adpcm_state::init_mkyturbo()
 
 void midyunit_adpcm_state::init_mkrep()
 {
-	// patch out protection for now
-
+	// HACK: patch out protection
 	uint16_t *rom = (uint16_t *)memregion("maindata")->base();
 
 	rom[0x94234 / 2] = 0x05a0;
@@ -600,20 +599,6 @@ void midyunit_base_state::machine_start()
 	save_item(NAME(m_prot_index));
 	save_item(NAME(m_cmos_w_enable));
 	save_pointer(NAME(m_cmos_ram), (0x2000 * 4)/2);
-}
-
-void term2_state::machine_start()
-{
-	midyunit_adpcm_state::machine_start();
-
-	m_left_flash.resolve();
-	m_right_flash.resolve();
-	m_left_gun_recoil.resolve();
-	m_right_gun_recoil.resolve();
-	m_left_gun_green_led.resolve();
-	m_left_gun_red_led.resolve();
-	m_right_gun_green_led.resolve();
-	m_right_gun_red_led.resolve();
 }
 
 void midzunit_state::machine_reset()

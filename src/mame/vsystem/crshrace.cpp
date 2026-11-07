@@ -605,7 +605,7 @@ void crshrace_state::crshrace(machine_config &config) // TODO: PCB sports 32 MHz
 	m_audiocpu->set_addrmap(AS_IO, &crshrace_state::sound_io_map);
 
 	// video hardware
-	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_RASTER));
+	screen_device &screen(SCREEN(config, "screen"));
 	screen.set_refresh_hz(60);
 	screen.set_size(64*8, 32*8);
 	screen.set_visarea(0*8, 40*8-1, 0*8, 28*8-1);
@@ -617,13 +617,13 @@ void crshrace_state::crshrace(machine_config &config) // TODO: PCB sports 32 MHz
 	GFXDECODE(config, m_gfxdecode, m_palette, gfx_crshrace);
 	PALETTE(config, m_palette).set_format(palette_device::xGBR_555, 2048);
 
-	VSYSTEM_SPR(config, m_spr, 0, m_palette, gfx_crshrace_spr);
+	VSYSTEM_SPR(config, m_spr, m_palette, gfx_crshrace_spr);
 	m_spr->set_tile_indirect_cb(FUNC(crshrace_state::tile_callback));
 
 	BUFFERED_SPRITERAM16(config, m_spriteram[0]);
 	BUFFERED_SPRITERAM16(config, m_spriteram[1]);
 
-	K053936(config, m_k053936, 0);
+	K053936(config, m_k053936);
 	m_k053936->set_wrap(1);
 	m_k053936->set_offsets(-48, -21);
 

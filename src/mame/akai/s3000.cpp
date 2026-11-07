@@ -245,7 +245,6 @@ void s3000_state::machine_start()
 	save_item(NAME(m_count_dial));
 	save_item(NAME(m_quadrature_phase));
 
-	m_floppy_led.resolve();
 	m_floppy->get_device()->setup_led_cb(floppy_image_device::led_cb(&s3000_state::floppy_led_cb, this));
 }
 void s3000_state::machine_reset()
@@ -609,7 +608,7 @@ void s3000_state::base(machine_config &config)
 
 	INPUT_MERGER_ALL_HIGH(config, "tc").output_handler().set(m_fdc, FUNC(upd72069_device::tc_line_w));
 
-	SCREEN(config, m_screen, SCREEN_TYPE_LCD);
+	SCREEN(config, m_screen).set_lcd();
 	m_screen->set_refresh_hz(80);
 	m_screen->set_screen_update("lcdc", FUNC(hd61830_device::screen_update));
 	m_screen->set_size(240, 64);   //6x20, 8x8

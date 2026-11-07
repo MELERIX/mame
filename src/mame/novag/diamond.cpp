@@ -45,7 +45,7 @@ BTANB:
 #include "sound/dac.h"
 #include "video/pwm.h"
 
-#include "screen.h"
+#include "screen_svg.h"
 #include "speaker.h"
 
 #include <bit>
@@ -134,8 +134,6 @@ private:
 
 void diamond_state::machine_start()
 {
-	m_out_lcd.resolve();
-
 	if (m_rombank)
 		m_rombank->configure_entries(0, 4, memregion("eprom")->base(), 0x8000);
 
@@ -453,10 +451,9 @@ void diamond_state::diamond(machine_config &config)
 	m_lcd_pwm->output_x().set(FUNC(diamond_state::lcd_pwm_w));
 	m_lcd_pwm->set_bri_levels(0.05);
 
-	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_SVG));
+	screen_svg_device &screen(SCREEN_SVG(config, "screen"));
 	screen.set_refresh_hz(60);
 	screen.set_size(1920/5, 606/5);
-	screen.set_visarea_full();
 
 	PWM_DISPLAY(config, m_led_pwm).set_size(2, 8);
 	config.set_default_layout(layout_novag_diamond);
@@ -491,9 +488,8 @@ void diamond_state::diamond2(machine_config &config)
 	// video hardware
 	m_lcd_pwm->set_width(16);
 
-	screen_device &screen(*subdevice<screen_device>("screen"));
+	screen_svg_device &screen(*subdevice<screen_svg_device>("screen"));
 	screen.set_size(1920/5, 671/5);
-	screen.set_visarea_full();
 
 	config.set_default_layout(layout_novag_diamond2);
 }

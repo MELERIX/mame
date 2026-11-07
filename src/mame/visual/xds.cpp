@@ -287,7 +287,7 @@ void xds_state::xds19p(machine_config &config)
 	NVRAM(config, "nvram");
 
 	// video hardware
-	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
+	SCREEN(config, m_screen);
 	m_screen->set_raw(100_MHz_XTAL, 1472, 0, 1152, 941, 0, 904);
 	m_screen->set_screen_update(FUNC(xds_state::screen_update));
 
@@ -318,7 +318,7 @@ void xds_state::xds19p(machine_config &config)
 	m_serialport->dcd_handler().set(m_duart, FUNC(mc68681_device::ip2_w));
 	m_serialport->si_handler().set(m_duart, FUNC(mc68681_device::ip5_w));
 
-	ACIA6850(config, m_acia, 0);
+	ACIA6850(config, m_acia);
 	m_acia->irq_handler().set_inputline(m_maincpu, 3);
 	m_acia->txd_handler().set("kbd", FUNC(xds_kbd_hle_device::rx_w));
 

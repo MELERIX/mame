@@ -520,10 +520,13 @@ void fc100_state::fc100(machine_config &config)
 	m_vdg->set_screen("screen");
 	m_vdg->input_callback().set(FUNC(fc100_state::mc6847_videoram_r));
 	m_vdg->set_get_char_rom(FUNC(fc100_state::get_char_rom));
-	m_vdg->set_get_fixed_mode(m5c6847p1_device::MODE_INTEXT);
+	m_vdg->set_fixed_mode(m5c6847p1_device::MODE_INTEXT);
 	// other lines not connected
 
-	SCREEN(config, "screen", SCREEN_TYPE_RASTER);
+	screen_device &screen(SCREEN(config, "screen"));
+	screen.set_raw(XTAL(3'579'545) * 2, 456, 0, 372, 262, 0, 243);
+	screen.set_screen_update(m_vdg, FUNC(m5c6847p1_device::screen_update));
+
 	GFXDECODE(config, "gfxdecode", "f4palette", gfx_fc100);
 	PALETTE(config, "f4palette", palette_device::MONOCHROME);
 
@@ -542,7 +545,7 @@ void fc100_state::fc100(machine_config &config)
 	m_cass->set_default_state(CASSETTE_PLAY | CASSETTE_MOTOR_DISABLED | CASSETTE_SPEAKER_ENABLED);
 	m_cass->add_route(ALL_OUTPUTS, "mono", 0.05);
 
-	I8251(config, m_uart, 0);
+	I8251(config, m_uart);
 	m_uart->txd_handler().set([this] (bool state) { m_cassbit = state; });
 	clock_device &uart_clock(CLOCK(config, "uart_clock", XTAL(4'915'200)/16/16)); // gives 19200
 	uart_clock.signal_handler().set(m_uart, FUNC(i8251_device::write_txc));

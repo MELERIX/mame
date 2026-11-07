@@ -19,6 +19,8 @@
 #include "formats/ap_dsk35.h"
 #include "layout/generic.h"
 
+#include "endianness.h"
+
 static constexpr u32 C7M  = 7833600;
 static constexpr u32 C15M = (C7M * 2);
 
@@ -67,7 +69,7 @@ void vasp_device::map(address_map &map)
 
 void vasp_device::device_add_mconfig(machine_config &config)
 {
-	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
+	SCREEN(config, m_screen);
 	m_screen->set_raw(25175000, 800, 0, 640, 525, 0, 480);
 	m_screen->set_size(1024, 768);
 	m_screen->set_visarea(0, 640 - 1, 0, 480 - 1);

@@ -807,12 +807,12 @@ void atlantis_state::mwskins(machine_config &config)
 	m_maincpu->set_dcache_size(16384);
 	m_maincpu->set_system_clock(66666666);
 
-	PCI_ROOT(config, "pci", 0);
+	PCI_ROOT(config, "pci");
 
-	vrc4373_device &vrc4373(VRC4373(config, PCI_ID_NILE, 0, m_maincpu));
+	vrc4373_device &vrc4373(VRC4373(config, PCI_ID_NILE, m_maincpu));
 	vrc4373.set_ram_size(0x00800000);
 
-	pci9050_device &pci9050(PCI9050(config, PCI_ID_9050, 0));
+	pci9050_device &pci9050(PCI9050(config, PCI_ID_9050));
 	pci9050.set_map(0, address_map_constructor(&atlantis_state::map0, "map0", this), this);
 	pci9050.set_map(1, address_map_constructor(&atlantis_state::map1, "map1", this), this);
 	pci9050.set_map(2, address_map_constructor(&atlantis_state::map2, "map2", this), this);
@@ -831,25 +831,25 @@ void atlantis_state::mwskins(machine_config &config)
 	ZEUS2(config, m_zeus, ZEUS2_VIDEO_CLOCK);
 	m_zeus->set_float_mode(1);
 	m_zeus->irq_callback().set(FUNC(atlantis_state::zeus_irq));
-	m_zeus->vblank_callback().set(FUNC(atlantis_state::vblank_irq));
+	m_zeus->vsync_callback().set(FUNC(atlantis_state::vblank_irq));
 	m_zeus->set_screen(m_screen);
 	m_zeus->set_system_type(zeus2_device::MWSKINS);
 
-	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
+	SCREEN(config, m_screen);
 	m_screen->set_raw(ZEUS2_VIDEO_CLOCK / 8, 529, 0, 400, 278, 0, 256);
 	m_screen->set_screen_update("zeus2", FUNC(zeus2_device::screen_update));
 
 	/* sound hardware */
 	SPEAKER(config, "speaker", 2).front();
 
-	DCS2_AUDIO_DENVER_2CH(config, m_dcs, 0);
+	DCS2_AUDIO_DENVER_2CH(config, m_dcs);
 	m_dcs->set_maincpu_tag(m_maincpu);
 	m_dcs->set_dram_in_mb(4);
 	m_dcs->set_polling_offset(0xe33);
 	m_dcs->add_route(0, "speaker", 1.0, 1);
 	m_dcs->add_route(1, "speaker", 1.0, 0);
 
-	MIDWAY_IOASIC(config, m_ioasic, 0);
+	MIDWAY_IOASIC(config, m_ioasic);
 	m_ioasic->in_port_cb<0>().set_ioport("DIPS");
 	m_ioasic->in_port_cb<1>().set_ioport("SYSTEM");
 	m_ioasic->in_port_cb<2>().set_ioport("IN1");
@@ -862,7 +862,7 @@ void atlantis_state::mwskins(machine_config &config)
 	m_ioasic->set_auto_ack(1);
 	if DEBUG_CONSOLE {
 		m_ioasic->serial_tx_handler().set(m_uart0, FUNC(generic_terminal_device::write));
-		GENERIC_TERMINAL(config, m_uart0, 0);
+		GENERIC_TERMINAL(config, m_uart0);
 		m_uart0->set_keyboard_callback("ioasic", FUNC(midway_ioasic_device::serial_rx_w));
 	}
 

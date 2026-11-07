@@ -32,13 +32,16 @@ public:
 	void fixitflx(machine_config &config) ATTR_COLD;
 	void wiwcs(machine_config &config) ATTR_COLD;
 	void poke(machine_config &config) ATTR_COLD;
+	void pixlstar(machine_config &config) ATTR_COLD;
 	void flufflav(machine_config &config) ATTR_COLD;
 	void puni(machine_config &config) ATTR_COLD;
 	void bubltea(machine_config &config) ATTR_COLD;
 	void dsgnpal(machine_config &config) ATTR_COLD;
 	void bftetris(machine_config &config) ATTR_COLD;
+	void pink218(machine_config &config) ATTR_COLD;
 
 	void init_fif() ATTR_COLD;
+	void init_pink218() ATTR_COLD;
 
 protected:
 	virtual void machine_start() override ATTR_COLD;
@@ -348,7 +351,7 @@ void generalplus_gpl951xx_game_state::gpl951xx(machine_config &config)
 	m_maincpu->i80_cmd_out().set(FUNC(generalplus_gpl951xx_game_state::lcd_i80_cmd));
 	m_maincpu->i80_data_out().set(FUNC(generalplus_gpl951xx_game_state::lcd_i80_data));
 
-	SCREEN(config, m_screen, SCREEN_TYPE_LCD);
+	SCREEN(config, m_screen).set_lcd();
 	m_screen->set_refresh_hz(30); // is this coming from the LCDC? 60 is definitely too fast for the IRQ rate
 	m_screen->set_size(320*2, 262*2);
 	m_screen->set_visarea(0, 320-1, 0, 240-1);
@@ -356,9 +359,9 @@ void generalplus_gpl951xx_game_state::gpl951xx(machine_config &config)
 
 	m_screen->screen_vblank().set(m_maincpu, FUNC(generalplus_gpl951xx_device::vblank));
 
-	UNKNOWN_BFTETRIS_LCDC(config, m_lcdc, 0);
+	UNKNOWN_BFTETRIS_LCDC(config, m_lcdc);
 
-	GENERIC_SPI_FLASH(config, m_genspi, 0);
+	GENERIC_SPI_FLASH(config, m_genspi);
 
 	SPEAKER(config, "speaker", 2).front();
 }
@@ -393,6 +396,14 @@ void generalplus_gpl951xx_game_state::poke(machine_config &config)
 	m_genspi->set_jedec_manufacturer(0xc2);
 	m_genspi->set_jedec_memtype(0x20);
 	m_genspi->set_jedec_capacity(0x19);
+}
+
+void generalplus_gpl951xx_game_state::pixlstar(machine_config &config)
+{
+	gpl951xx(config);
+	m_genspi->set_jedec_manufacturer(0xc2);
+	m_genspi->set_jedec_memtype(0x20);
+	m_genspi->set_jedec_capacity(0x18);
 }
 
 void generalplus_gpl951xx_game_state::flufflav(machine_config &config)
@@ -440,22 +451,23 @@ void generalplus_gpl951xx_game_state::bftetris(machine_config &config)
 	m_screen->set_screen_update(FUNC(generalplus_gpl951xx_game_state::bftetris_screen_update));
 }
 
+void generalplus_gpl951xx_game_state::pink218(machine_config &config)
+{
+	bftetris(config);
 
+	// check!
+	m_genspi->set_jedec_manufacturer(0xc2);
+	m_genspi->set_jedec_memtype(0x20);
+	m_genspi->set_jedec_capacity(0x17);
+}
 
-// There should be a small internal ROM (0x4000) bytes that does some basic setup
 
 ROM_START( fixitflx )
-	ROM_REGION16_BE( 0x40000, "maincpu:internal", ROMREGION_ERASE00 )
-	//ROM_LOAD16_WORD_SWAP( "internal.rom", 0x00000, 0x40000, NO_DUMP )
-
 	ROM_REGION16_BE(0x200000, "spi", ROMREGION_ERASE00)
 	ROM_LOAD16_WORD_SWAP( "fixitfelix_md25q16csig_c84015.bin", 0x0000, 0x200000, CRC(605c6863) SHA1(4f6cc2e8388e20eb90c6b05265273650eeea56eb) )
 ROM_END
 
 ROM_START( wiwcs )
-	ROM_REGION16_BE( 0x40000, "maincpu:internal", ROMREGION_ERASE00 )
-	//ROM_LOAD16_WORD_SWAP( "internal.rom", 0x00000, 0x40000, NO_DUMP )
-
 	ROM_REGION16_BE(0x800000, "spi", ROMREGION_ERASE00)
 	ROM_LOAD16_WORD_SWAP( "wwcs.img", 0x0000, 0x800000, CRC(9b86bc45) SHA1(17721c662642a257d3e0f56e351a9a80d75d9110) )
 
@@ -464,41 +476,26 @@ ROM_START( wiwcs )
 ROM_END
 
 ROM_START( bfpacman )
-	ROM_REGION16_BE( 0x40000, "maincpu:internal", ROMREGION_ERASE00 )
-	//ROM_LOAD16_WORD_SWAP( "internal.rom", 0x00000, 0x40000, NO_DUMP )
-
 	ROM_REGION16_BE(0x100000, "spi", ROMREGION_ERASE00)
 	ROM_LOAD16_WORD_SWAP( "basicfunpacman_25q80_c84014.bin", 0x0000, 0x100000, CRC(dd39fc64) SHA1(48c0e1eb729f61b7359e1fd52b7faab56817dfe8) )
 ROM_END
 
 ROM_START( bfmpac )
-	ROM_REGION16_BE( 0x40000, "maincpu:internal", ROMREGION_ERASE00 )
-	//ROM_LOAD16_WORD_SWAP( "internal.rom", 0x00000, 0x40000, NO_DUMP )
-
 	ROM_REGION16_BE(0x100000, "spi", ROMREGION_ERASE00)
 	ROM_LOAD16_WORD_SWAP( "mspacman_25q80_c84014.bin", 0x0000, 0x100000, CRC(c0c3f8ce) SHA1(30da9b14f1a2c966167c97da9b8329f2f7f73291) )
 ROM_END
 
 ROM_START( bfdigdug )
-	ROM_REGION16_BE( 0x40000, "maincpu:internal", ROMREGION_ERASE00 )
-	//ROM_LOAD16_WORD_SWAP( "internal.rom", 0x00000, 0x40000, NO_DUMP )
-
 	ROM_REGION16_BE(0x100000, "spi", ROMREGION_ERASE00)
 	ROM_LOAD16_WORD_SWAP( "arcadeclassicsdigdug_25q80csig_c84014.bin", 0x0000, 0x100000, CRC(4030bc46) SHA1(8c086c96b9822e95c1862012786d6d6e59e0387e) )
 ROM_END
 
 ROM_START( bfgalaga )
-	ROM_REGION16_BE( 0x40000, "maincpu:internal", ROMREGION_ERASE00 )
-	//ROM_LOAD16_WORD_SWAP( "internal.rom", 0x00000, 0x40000, NO_DUMP )
-
 	ROM_REGION16_BE(0x100000, "spi", ROMREGION_ERASE00)
 	ROM_LOAD16_WORD_SWAP( "arcadeclassicsgalaga_25q80csig_c84014.bin", 0x0000, 0x100000, CRC(69982c9d) SHA1(0f8f403fefa7d8a9fdfcc04dca5a67919b662c7e) )
 ROM_END
 
 ROM_START( bfspyhnt )
-	ROM_REGION16_BE( 0x40000, "maincpu:internal", ROMREGION_ERASE00 )
-	//ROM_LOAD16_WORD_SWAP( "internal.rom", 0x00000, 0x40000, NO_DUMP )
-
 	ROM_REGION16_BE(0x200000, "spi", ROMREGION_ERASE00)
 	ROM_LOAD16_WORD_SWAP( "arcadeclassicsspyhunter_md25q16csig_c84015.bin", 0x0000, 0x200000, CRC(1f1eaabd) SHA1(1c484e0b0749123cfa1ac6d1959aefa6ed09ab20) )
 
@@ -506,18 +503,13 @@ ROM_START( bfspyhnt )
 ROM_END
 
 ROM_START( bftetris )
-	ROM_REGION16_BE( 0x40000, "maincpu:internal", ROMREGION_ERASE00 )
-	//ROM_LOAD16_WORD_SWAP( "internal.rom", 0x00000, 0x40000, NO_DUMP )
-
 	ROM_REGION16_BE(0x200000, "spi", ROMREGION_ERASE00)
 	ROM_LOAD16_WORD_SWAP( "arcadeclassicstetris_25q16ct_c84015.bin", 0x0000, 0x200000, CRC(a97e1bab) SHA1(400944d310d5d5fccb2c6d048d7bf0cb00da09de) )
 ROM_END
 
-
-
 ROM_START( punirune )
 	ROM_REGION16_BE(0x800000, "spi", ROMREGION_ERASE00)
-	ROM_LOAD16_WORD_SWAP( "25l64.ic103", 0x0000, 0x800000, CRC(0737edc0) SHA1(fce19d91a0522a75e676197fb18645b8c6a273b8) )
+	ROM_LOAD16_WORD_SWAP( "25l64.ic103", 0x0000, 0x800000, CRC(97ce057d) SHA1(6244afd57990b178b4c404d6a08735b6db5348f8) )
 ROM_END
 
 ROM_START( punirunea )
@@ -527,17 +519,12 @@ ROM_END
 
 ROM_START( punij1m )
 	ROM_REGION16_BE(0x800000, "spi", ROMREGION_ERASE00)
-	ROM_LOAD16_WORD_SWAP( "japan_v1pcb_mint_25l6433f.ic103", 0x0000, 0x800000, CRC(76f28b5b) SHA1(be04d60c88df52951dd51eab2f5bf5f1dc2405e8) )
+	ROM_LOAD16_WORD_SWAP( "japan_v1pcb_mint_pink_25l6433f.ic103", 0x0000, 0x800000, CRC(b83c43f3) SHA1(f811d7ad6d28efe4f897155ca20da04168cdb975) )
 ROM_END
 
-ROM_START( punij1pk ) // this might be the same software revision as punij1m with different save (or default save) data
+ROM_START( punij1pu ) // different software revision to punij1m but same case style
 	ROM_REGION16_BE(0x800000, "spi", ROMREGION_ERASE00)
-	ROM_LOAD16_WORD_SWAP( "japan_v1pcb_pink_25l6433f.ic103", 0x0000, 0x800000, CRC(9268c881) SHA1(10bacfa48b3d02956d804396b652829ff868d947) )
-ROM_END
-
-ROM_START( punij1pu ) // different software revision to punij1m / punij1pk but same case style
-	ROM_REGION16_BE(0x800000, "spi", ROMREGION_ERASE00)
-	ROM_LOAD16_WORD_SWAP( "japan_v1pcb_purple_25l6433f.ic103", 0x0000, 0x800000, CRC(5b73bcb6) SHA1(109b6fa29693e7622c528d95d2a995d37a1cd8ca) )
+	ROM_LOAD16_WORD_SWAP( "japan_v1pcb_purple_25l6433f.ic103", 0x0000, 0x800000, CRC(ac6dd1f2) SHA1(00e65f272e45cc7f01f69a5d971728a9a7fdf17a) )
 ROM_END
 
 ROM_START( punij2pk )
@@ -547,12 +534,37 @@ ROM_END
 
 ROM_START( punifrnd )
 	ROM_REGION16_BE(0x800000, "spi", ROMREGION_ERASE00)
-	ROM_LOAD16_WORD_SWAP( "25oh64.ic3", 0x0000, 0x800000, CRC(622ca9b3) SHA1(4206393a4458ffcdb63352e743481865532fe8b5) )
+	ROM_LOAD16_WORD_SWAP( "25oh64.ic3", 0x0000, 0x800000, CRC(49e14af2) SHA1(477d1335587894793bac913c877d82dba46884d3) )
 ROM_END
 
 ROM_START( punistar )
 	ROM_REGION16_BE(0x800000, "spi", ROMREGION_ERASE00)
 	ROM_LOAD16_WORD_SWAP( "xm25qh64c.ic3", 0x0000, 0x800000, CRC(72f54f23) SHA1(902955764d0b61decc057eb3afaf2960cf2134c6) )
+ROM_END
+
+ROM_START( pixlstar )
+	ROM_REGION16_BE(0x1000000, "spi", ROMREGION_ERASE00)
+	ROM_LOAD16_WORD_SWAP( "pixel_stars.bin", 0x0000, 0x1000000, CRC(24787fa9) SHA1(104791a1e5783e6d657c6c3b37c2120db8e6f4eb) )
+ROM_END
+
+ROM_START( kenshino )
+	ROM_REGION16_BE(0x800000, "spi", ROMREGION_ERASE00)
+	ROM_LOAD16_WORD_SWAP( "kenshi no michi.bin", 0x0000, 0x800000, CRC(259c8393) SHA1(5a1aa31127a188cdce1efb87d48016b49aebfd61) )
+ROM_END
+
+ROM_START( tamasmrt )
+	ROM_REGION16_BE(0x1000000, "spi", ROMREGION_ERASE00)
+	ROM_LOAD16_WORD_SWAP( "tamasmart_mb_spi.bin", 0x0000, 0x1000000, CRC(d1bce309) SHA1(b17f245e1c5919584cd84e8708ed7aba25c3aced) )
+ROM_END
+
+ROM_START( tamasmrta )
+	ROM_REGION16_BE(0x1000000, "spi", ROMREGION_ERASE00)
+	ROM_LOAD16_WORD_SWAP( "tamasmart_s_spi.bin", 0x0000, 0x1000000, CRC(da7296dc) SHA1(92b5f92fc06274ee886d4ce3c11dae9e40c1f219) )
+ROM_END
+
+ROM_START( teriermn )
+	ROM_REGION16_BE(0x1000000, "spi", ROMREGION_ERASE00)
+	ROM_LOAD16_WORD_SWAP( "spi_terriermon.bin", 0x0000, 0x1000000, CRC(02073b42) SHA1(8d4a947cf60463e9896f941d7647359a7eac1c1e) )
 ROM_END
 
 ROM_START( flufflav )
@@ -622,12 +634,12 @@ ROM_END
 
 ROM_START( segapet2 )
 	ROM_REGION16_BE(0x800000, "spi", ROMREGION_ERASE00 )
-	ROM_LOAD16_WORD_SWAP( "purple_gpr25l64.ic3", 0x0000, 0x800000, CRC(e223eabf) SHA1(fa88173361af7f8cb7651bd7ccb73d7137eb6cf9) )
+	ROM_LOAD16_WORD_SWAP( "purple_gpr25l64.ic3", 0x0000, 0x800000, CRC(a5f2cd07) SHA1(ba510b2afce3826f5153f6a606bf9d2d3b1c4399) )
 ROM_END
 
 ROM_START( segapet2a )
 	ROM_REGION16_BE(0x800000, "spi", ROMREGION_ERASE00 )
-	ROM_LOAD16_WORD_SWAP( "orange_gpr25l64.ic3", 0x0000, 0x800000, CRC(25605da6) SHA1(2733f30037551b2e5895efbb19ed953e81405141) )
+	ROM_LOAD16_WORD_SWAP( "orange_gpr25l64.ic3", 0x0000, 0x800000, CRC(3776c81a) SHA1(6ba67098a38e4efe7bab63ff052c98a00e1cdabd) )
 ROM_END
 
 ROM_START( segapet3 )
@@ -647,8 +659,25 @@ ROM_END
 
 ROM_START( bubltea )
 	ROM_REGION16_BE(0x800000, "spi", ROMREGION_ERASE00 )
-	ROM_LOAD16_WORD_SWAP( "gpr25l64.ic2", 0x0000, 0x800000, CRC(a6d73241) SHA1(bc67d932ffc83d91dc2d64f40bbce08c1e8b9f4e) )
+	ROM_LOAD16_WORD_SWAP( "gpr25l64.ic2", 0x0000, 0x800000, CRC(56549fa7) SHA1(4a03b4c69035baa48b146ecee3912a3b0672b845) )
 ROM_END
+
+ROM_START( pink218 )
+	ROM_REGION( 0x800000, "spi", ROMREGION_ERASEFF )
+	ROM_LOAD( "p25q64h.u2", 0x000000, 0x800000, CRC(7209e7bf) SHA1(1cc0a0b74d3f373dae18b52b3f7014d56f0d9b51) )
+ROM_END
+
+ROM_START( smkfrnd )
+	ROM_REGION16_BE(0x800000, "spi", ROMREGION_ERASE00 )
+	ROM_LOAD16_WORD_SWAP( "gpr25l6403.u3", 0x0000, 0x800000, CRC(1a865cc2) SHA1(c7abee0b625c713f22c0ffbc923e0938e503ce55) )
+ROM_END
+
+ROM_START( chiikawa )
+	ROM_REGION16_BE(0x800000, "spi", ROMREGION_ERASE00 )
+	ROM_LOAD16_WORD_SWAP( "chiikawa_to_issho.bin", 0x0000, 0x800000, CRC(cb65a0f6) SHA1(2c8fa2c52fbb7968c4cebfd4b7bdf9b97f31f2f3) )
+ROM_END
+
+
 
 void generalplus_gpl951xx_game_state::init_fif()
 {
@@ -659,6 +688,20 @@ void generalplus_gpl951xx_game_state::init_fif()
 			3, 1, 11, 9, 6, 14, 0, 2, 8, 7, 13, 15, 4, 5, 12, 10);
 	}
 }
+
+
+void generalplus_gpl951xx_game_state::init_pink218()
+{
+	u16 *romdata = (u16*)memregion("spi")->base();
+	int romsize = memregion("spi")->bytes();
+
+	for (offs_t i = 0; i < romsize / 2; i++)
+	{
+		romdata[i] = romdata[i] ^ 0xc8a9;
+		romdata[i] = bitswap<16>(romdata[i], 3,1,11,9,  6,14,0,2,  8,7,13,15,  4,5,12,10);
+	}
+}
+
 
 } // anonymous namespace
 
@@ -681,8 +724,7 @@ CONS(2021, punirune,  0,        0, puni, puni, generalplus_gpl951xx_game_state, 
 CONS(2021, punirunea, punirune, 0, puni, bfspyhnt, generalplus_gpl951xx_game_state, empty_init, "Takara Tomy", "Punirunes (HXR-1 PCB)", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND)
 
 // the case on these looks like the European release, including English title logo.  CPU is a glob, PUNIRUNZU_MAIN_DICE_V1 on PCB
-CONS(2021, punij1m,  punirune, 0, puni, puni, generalplus_gpl951xx_game_state, empty_init, "Takara Tomy", "Punirunes (PUNIRUNZU_MAIN_DICE_V1, mint, Japan)", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND)
-CONS(2021, punij1pk, punirune, 0, puni, puni, generalplus_gpl951xx_game_state, empty_init, "Takara Tomy", "Punirunes (PUNIRUNZU_MAIN_DICE_V1, pink, Japan)", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND)
+CONS(2021, punij1m,  punirune, 0, puni, puni, generalplus_gpl951xx_game_state, empty_init, "Takara Tomy", "Punirunes (PUNIRUNZU_MAIN_DICE_V1, mint/pink, Japan)", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND)
 CONS(2021, punij1pu, punirune, 0, puni, puni, generalplus_gpl951xx_game_state, empty_init, "Takara Tomy", "Punirunes (PUNIRUNZU_MAIN_DICE_V1, purple, Japan)", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND)
 
 // the case on these is similar to the above, but the text is in Japanese, uses PUNIRUNZU_MAIN_V2 on pcb
@@ -692,6 +734,16 @@ CONS(2021, punij2pk, punirune, 0, puni, puni, generalplus_gpl951xx_game_state, e
 CONS(2021, punifrnd, 0,        0, puni, puni, generalplus_gpl951xx_game_state, empty_init, "Takara Tomy", "Punirunes Punitomo Tsuushin (hot pink, Japan)", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND)
 
 CONS(2021, punistar, 0,        0, puni, base, generalplus_gpl951xx_game_state, empty_init, "Takara Tomy", "Punirunes Punistarz (pink, Japan)", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND)
+
+CONS(2020, pixlstar, 0,        0, pixlstar, base, generalplus_gpl951xx_game_state, empty_init, "Skyrocket Toys", "Pixel Stars Dreamhouse", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND)
+
+CONS(2022, kenshino, 0,        0, puni, base, generalplus_gpl951xx_game_state, empty_init, "Takara Tomy", "Kenshi No Michi (Japan)", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND)
+
+CONS(2021, tamasmrt,  0,        0, puni, base, generalplus_gpl951xx_game_state, empty_init, "Bandai", "Tamagotchi Smart (Japan, set 1)", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND)
+CONS(2021, tamasmrta, tamasmrt, 0, puni, base, generalplus_gpl951xx_game_state, empty_init, "Bandai", "Tamagotchi Smart (Japan, set 2)", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND)
+
+CONS(2021, teriermn,  0,        0, puni, base, generalplus_gpl951xx_game_state, empty_init, "Bandai", "Terriermon (Japan)", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND)
+
 
 // 'Poo' emoji shaped item, comes in multiple colours, has a solder pad which might change between units
 // this was dumped from the 'Lavender' unit
@@ -705,7 +757,7 @@ CONS(2021, pokgoget, 0,        0, poke, bfspyhnt, generalplus_gpl951xx_game_stat
 // ガチッとゲットだぜ! モンスターボール
 CONS(2021, pokebala, 0,        0, poke, bfspyhnt, generalplus_gpl951xx_game_state, empty_init, "Takara Tomy", "Gachitto Get da ze! Monster Ball (Japan)", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND)
 // ポケモンといっしょ！モンスターボール
-CONS(2021, pokeissh, 0,        0, poke, bfspyhnt, generalplus_gpl951xx_game_state, empty_init, "Takara Tomy", "Pokemon to Issho! Monster Ball (Japan)", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND)
+CONS(2021, pokeissh, 0,        0, poke, bfspyhnt, generalplus_gpl951xx_game_state, empty_init, "Takara Tomy", u8"Pokémon to Issho! Monster Ball (Japan)", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND)
 // めちゃナゲ! モンスターボール
 CONS(2021, pokemech, 0,        0, poke, bfspyhnt, generalplus_gpl951xx_game_state, empty_init, "Takara Tomy", "Mecha Nage! Monster Ball (Japan)", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND)
 
@@ -731,8 +783,8 @@ CONS( 2018, segapet1a, segapet1, 0, puni, segapet1, generalplus_gpl951xx_game_st
 CONS( 2020, segaptdx,  0,        0, puni, segapet1, generalplus_gpl951xx_game_state, empty_init, "Sega Toys", "Mocchiri Pet Mocchimaruzu DX (190313A P)", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND)
 
 // also もっちりペット もっちまるず
-CONS( 2019, segapet2,  0,        0, puni, segapet2, generalplus_gpl951xx_game_state, empty_init, "Sega Toys", "Mocchiri Pet Mocchimaruzu (2019 version, set 1)", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND)
-CONS( 2019, segapet2a, segapet2, 0, puni, segapet2, generalplus_gpl951xx_game_state, empty_init, "Sega Toys", "Mocchiri Pet Mocchimaruzu (2019 version, set 2)", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND)
+CONS( 2019, segapet2,  0,        0, puni, segapet2, generalplus_gpl951xx_game_state, empty_init, "Sega Toys", "Mocchiri Pet Mocchimaruzu (2019 version, purple)", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND)
+CONS( 2019, segapet2a, segapet2, 0, puni, segapet2, generalplus_gpl951xx_game_state, empty_init, "Sega Toys", "Mocchiri Pet Mocchimaruzu (2019 version, orange)", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND)
 
 // these ones have motors in the ears and a more fluffy cover
 // もっちふわペット もっちまるず
@@ -742,3 +794,11 @@ CONS( 2020, segapet3a, segapet3, 0, puni, base, generalplus_gpl951xx_game_state,
 
 // まぜまぜミックス！ぷにタピちゃん
 CONS( 201?, bubltea,   0,        0, bubltea, bubltea, generalplus_gpl951xx_game_state, empty_init, "Bandai", "Mazemaze Mix! Puni Tapi-chan (Japan)", MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND)
+
+// this one has 2 checksums in service mode (like the generalplus_gp3x_unknown.cpp sets) but one is 00000000 and there is only a single ROM
+// BL-519-V1.2 20220822 on PCB
+CONS( 2022, pink218,      0,       0,      pink218,   bfspyhnt, generalplus_gpl951xx_game_state, init_pink218, "<unknown>", "218-in-1 Handheld Game (pink)", MACHINE_NOT_WORKING | MACHINE_NO_SOUND )
+
+CONS( 2022, smkfrnd,      0,       0,      puni,   segapet2, generalplus_gpl951xx_game_state, empty_init, "Tomy", "Sumikko Gurashi: Sumikko Friend", MACHINE_NOT_WORKING | MACHINE_NO_SOUND )
+
+CONS( 2022, chiikawa,     0,       0,      puni,   segapet2, generalplus_gpl951xx_game_state, empty_init, "Bandai", "Chiikawa to Issho (Japan)", MACHINE_NOT_WORKING | MACHINE_NO_SOUND )
